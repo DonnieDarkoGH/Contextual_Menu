@@ -51,10 +51,11 @@ namespace CustomPieMenu {
 
         }
 	
-	    // Update is called once per frame
-	    void Update () {
-		
-	    }
+        public void CreateNewMenu() {
+            Debug.Log("<b>ButtonManager</b> CreateNewMenu");
+
+            SOMenuStructure.CreateInstance("SOMenuStructure");
+        }
 
         public Vector3 TweenPosition(Vector3 _startPoint, Vector3 _targetPoint, float delta) {
 
@@ -101,11 +102,11 @@ namespace CustomPieMenu {
 
             //if (_button.BtnModel.State != ButtonModel.EState.UNFOLDED) 
             {
-                uint nbSubBtn = (uint)Random.Range(1, 6);
+                byte nbSubBtn = (byte)Random.Range(1, 6);
                 float baseAngle = _button.BaseAngle;
                 Vector3 startPoint = _button.BtnModel.TargetPoint;
 
-                for (uint i = 0; i < nbSubBtn; i++) {
+                for (byte i = 0; i < nbSubBtn; i++) {
                     float angularPos = GetAngleByIndex(i, nbSubBtn, baseAngle);
                     CreateButton(i, startPoint, angularPos, baseAngle);
                 }
@@ -114,7 +115,7 @@ namespace CustomPieMenu {
             return true;
         }
 
-        private void CreateButton(uint _index, Vector3 startPoint, float _angularPos, float _parentAngle) {
+        private void CreateButton(byte _index, Vector3 startPoint, float _angularPos, float _parentAngle) {
             //Debug.Log("<b>PieButton</b> CreateButton " + _index);
 
             GameObject newBtn = Instantiate(buttonPrefab, Vector3.zero, Quaternion.identity) as GameObject;

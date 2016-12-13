@@ -2,90 +2,96 @@
 using UnityEngine;
 using System.Collections.Generic;
 
-public class ButtonModel {
+namespace CustomPieMenu {
 
-    public enum EState { CREATED = 0, INITIALIZED, FOLDED, MOVING, UNFOLDED }
+    [System.Serializable]
+    public class ButtonModel {
 
-    public readonly uint index;
-    public readonly uint levelInMenu;
+        public enum EState { CREATED = 0, INITIALIZED, FOLDED, MOVING, UNFOLDED }
 
-    private EState  state         = EState.CREATED;
-    private EState  previousState = EState.CREATED;
-    private Vector3 startPoint;
-    private Vector3 targetPoint;
+        public byte index;
+        public string name = "";
+        public byte levelInMenu;
+        public byte parentIndex;
+        public Sprite icon;
 
-    private uint parentIndex;
-    private uint subButtonNumber = 1;
-    private bool isInPlace = false;
-    private bool isActive  = false;
+        private EState state = EState.CREATED;
+        private EState previousState = EState.CREATED;
+        private Vector3 startPoint;
+        private Vector3 targetPoint;
 
-    public bool IsInPlace {
-        get { return isInPlace; }
-        set {
-            isInPlace = value;
+        //[SerializeField] private byte childrenNb;
+        [SerializeField] private bool isInPlace = false;
+        [SerializeField] private bool isActive  = false;
 
-            if (isInPlace) 
-            {
-                switch (previousState) 
-                {
-                    case EState.CREATED:
-                    case EState.INITIALIZED:
-                        state = EState.UNFOLDED;
-                        break;
+        public bool IsInPlace {
+            get { return isInPlace; }
+            set {
+                isInPlace = value;
 
-                    case EState.UNFOLDED:
-                        state = EState.FOLDED;
-                        break;
+                if (isInPlace) {
+                    switch (previousState) {
+                        case EState.CREATED:
+                        case EState.INITIALIZED:
+                            state = EState.UNFOLDED;
+                            break;
 
-                    default:
-                        break;
+                        case EState.UNFOLDED:
+                            state = EState.FOLDED;
+                            break;
+
+                        default:
+                            break;
+                    }
+                    previousState = state;
                 }
-                previousState = state;
             }
         }
-    }
 
-    public bool IsActive {
-        get { return isActive; }
-        set { isActive = value; }
-    }
+        public bool IsActive {
+            get { return isActive; }
+            set { isActive = value; }
+        }
 
-    public Vector3 StartPoint {
-        get { return startPoint; }
-    }
+        public Vector3 StartPoint {
+            get { return startPoint; }
+        }
 
-    public Vector3 TargetPoint {
-        get { return targetPoint; }
-        set { targetPoint = value; }
-    }
+        public Vector3 TargetPoint {
+            get { return targetPoint; }
+            set { targetPoint = value; }
+        }
 
-    public uint SubButtonNumber {
-        get { return subButtonNumber; }
-        set { subButtonNumber = value; }
-    }
+        public EState State {
+            get { return state; }
+            set { state = value; }
+        }
 
-    public EState State {
-        get { return state; }
-        set { state = value; }
-    }
+        public ButtonModel(byte _index, byte _level, Vector3 _startPoint, byte _parentIndex) {
+            index       = _index;
+            levelInMenu = _level;
+            startPoint  = _startPoint;
+            parentIndex = _parentIndex;
 
-    public ButtonModel(uint _index, uint _level, Vector3 _startPoint, uint _parentIndex) {
-        index       = _index;
-        levelInMenu = _level;
-        startPoint  = _startPoint;
-        parentIndex = _parentIndex;
-    }
+            name = "New menu level " + _level;
+        }
 
-    public ButtonModel() : this(0, 0, Vector3.zero, 0) {
+        public ButtonModel() : this(0, 0, Vector3.zero, 0) {
 
-    }
+        }
 
-    public void SetNewStartPoint(Vector3 _startPoint) {
-        startPoint = _startPoint;
-    }
+        public void SetNewStartPoint(Vector3 _startPoint) {
+            startPoint = _startPoint;
+        }
 
-    public void SetTargetPoint(Vector3 _targetPoint) {
-        targetPoint = _targetPoint;
+        public void SetTargetPoint(Vector3 _targetPoint) {
+            targetPoint = _targetPoint;
+        }
+
+        public override string ToString() {
+            return GetType() + " (ID : " + index + ", Level : " + levelInMenu + ", parentID : " + parentIndex + ")";
+        }
+
     }
 }
 

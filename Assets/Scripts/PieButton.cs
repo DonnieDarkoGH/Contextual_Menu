@@ -37,7 +37,7 @@ namespace CustomPieMenu {
         }
 
         // Use this for initialization
-        public void Init(uint _index, float _angularPos, float _parentAngle, bool _isLinked = false) {
+        public void Init(byte _index, float _angularPos, float _parentAngle, bool _isLinked = false) {
             //Debug.Log("<b>PieButton</b> Init : " + name + ", to reach " + _endPosition);
             //Debug.Log(transform.position + ", "+  transform.localPosition);
 
