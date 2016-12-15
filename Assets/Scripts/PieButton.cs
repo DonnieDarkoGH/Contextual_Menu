@@ -9,16 +9,14 @@ namespace CustomPieMenu {
         public delegate bool PieButtonEvent(PieButton thisButton);
         public event PieButtonEvent OnClicked;
 
-        private ButtonModel btnModel;
-
-        ButtonModel.EState state;
+        [SerializeField] private ButtonModel btnModel;
 
         [SerializeField] RectTransform linkRef = null;
 
-        [SerializeField] Image icon = null;
+        [SerializeField] Image   icon = null;
 
-        [SerializeField] Vector3 movingPosition = Vector3.zero;
-        [SerializeField] Vector3 origin = Vector3.zero;
+        Vector3 movingPosition = Vector3.zero;
+        Vector3 origin         = Vector3.zero;
 
         RectTransform rectTransform;
 
@@ -37,11 +35,13 @@ namespace CustomPieMenu {
         }
 
         // Use this for initialization
-        public void Init(byte _index, float _angularPos, float _parentAngle, bool _isLinked = false) {
+        public void Init(Node _node, float _angularPos, float _parentAngle, bool _isLinked = false) {
+            Debug.Log("<b>PieButton</b> Init from node : " + _node.ToString());
             //Debug.Log("<b>PieButton</b> Init : " + name + ", to reach " + _endPosition);
             //Debug.Log(transform.position + ", "+  transform.localPosition);
 
-            baseAngle = _angularPos;
+            btnModel       = MenuManager.Instance.GetBtnModel(_node);
+            btnModel.State = ButtonModel.EState.INITIALIZED;
 
             if (rectTransform == null) {
                 rectTransform = GetComponent<RectTransform>();
@@ -51,21 +51,20 @@ namespace CustomPieMenu {
             if (icon == null) {
                 icon = GetComponentsInChildren<Image>()[2];
             }
+            icon.overrideSprite = btnModel.icon;
 
-            width  = rectTransform.rect.width;
-            height = rectTransform.rect.height;
+            width     = rectTransform.rect.width;
+            height    = rectTransform.rect.height;
+            baseAngle = _angularPos;
 
-            btnModel = new ButtonModel(_index, 0, rectTransform.anchoredPosition, 0);
-
+            //Debug.Log(btnModel.IsInPlace);
             CalculateTrajectory();
-
+            
             if (_isLinked) {
-                CreateLink(_angularPos);
+                //CreateLink(_angularPos);
             }
 
             startTime = Time.time;
-
-            //StartAnimation();
 
             //Type myType = typeof(RectTransform);
             //PropertyInfo[] fieldsInfo = myType.GetProperties();
@@ -79,47 +78,33 @@ namespace CustomPieMenu {
 
         IEnumerator MoveButton(Vector3 _start, Vector3 _end) {
 
-            float dt = TimeRatio();
-
-            while (dt < 1) 
+            while (TimeRatio() < 1) 
             {
                 btnModel.State = ButtonModel.EState.MOVING;
-                movingPosition = ButtonManager.Instance.TweenPosition(_start, _end, TimeRatio());
+                movingPosition = MenuManager.Instance.TweenPosition(_start, _end, TimeRatio());
                 rectTransform.anchoredPosition = movingPosition;
 
                 yield return null;
             }
 
-            movingPosition = btnModel.TargetPoint;
+            movingPosition                 = btnModel.TargetPoint;
             rectTransform.anchoredPosition = movingPosition;
 
             btnModel.IsInPlace = true;
         }
 
-        public void Init(Vector2 _position, bool _isInPlace = true) {
-            Debug.Log("<b>PieButton</b> Init at " + _position);
+        //public bool SetPositionInScreen(Vector2 _position) {
+        //    //Debug.Log("<b>PieButton</b> SetPositionInScreen to " + _position);
 
-            Init(0, 0, 0);
+        //    if (rectTransform != null) {
+        //        rectTransform.anchoredPosition = _position;
+        //        btnModel.SetNewStartPoint(_position);
+        //        //startPoint = _position;
+        //        return true;
+        //    }
 
-            SetPositionInScreen(_position);
-
-            btnModel.IsInPlace = _isInPlace;
-
-            CalculateTrajectory();
-        }
-
-        public bool SetPositionInScreen(Vector2 _position) {
-            //Debug.Log("<b>PieButton</b> SetPositionInScreen to " + _position);
-
-            if (rectTransform != null) {
-                rectTransform.anchoredPosition = _position;
-                btnModel.SetNewStartPoint(_position);
-                //startPoint = _position;
-                return true;
-            }
-
-            return false;
-        }
+        //    return false;
+        //}
 
 
         public void HandleClick() {
@@ -138,10 +123,10 @@ namespace CustomPieMenu {
                 throw new System.Exception("Button model must be set in PieButton to calculate the trajectory");
             }
 
-            float   spacing     = ButtonManager.Instance.Spacing;
+            btnModel.StartPoint = rectTransform.anchoredPosition;
+            float   spacing     = MenuManager.Instance.Spacing;
             Vector3 targetPoint = Vector3.zero;
-            //startPoint = rectTransform.anchoredPosition;
-
+            
             if (btnModel.IsInPlace) {
                 targetPoint = btnModel.StartPoint;
             }
@@ -213,8 +198,14 @@ namespace CustomPieMenu {
 
         //}
 
-        float TimeRatio() {
-            return (Time.time - startTime) * ButtonManager.Instance.TweenSpeed * (1.0f - 0.1f * btnModel.index);
+        private float TimeRatio() {
+            return (Time.time - startTime) * MenuManager.Instance.TweenSpeed ;// * (1.0f - 0.1f * btnModel.index);
+        }
+
+        private void OnDisable() {
+            if(OnClicked != null) {
+                MenuManager.Instance.UnsuscribeButtonEvent(this);
+            }
         }
 
     }

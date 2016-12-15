@@ -2,14 +2,14 @@
 using UnityEngine;
 
 namespace CustomPieMenu {
-    [CustomEditor(typeof(ButtonManager))]
+    [CustomEditor(typeof(MenuManager))]
     [CanEditMultipleObjects]
-    public class ButtonManagerEditor : Editor {
+    public class MenuManagerEditor : Editor {
 
-        private ButtonManager managerScript;
+        private MenuManager managerScript;
 
         void OnEnable() {
-            managerScript = (ButtonManager)target;
+            managerScript = (MenuManager)target;
         }
 
         // Use this for initialization
@@ -19,6 +19,7 @@ namespace CustomPieMenu {
             
             if(GUILayout.Button("Create new menu")) {
                 managerScript.CreateNewMenu();
+                
             }
 
 

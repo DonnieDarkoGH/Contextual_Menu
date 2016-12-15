@@ -3,11 +3,11 @@ using UnityEditor;
 using UnityEngine;
 
 namespace CustomPieMenu {
-    [CustomEditor(typeof(SOMenuStructure))]
+    [CustomEditor(typeof(SO_MenuStructure))]
     [CanEditMultipleObjects]
-    public class SOMenuStructureEditor : Editor {
+    public class SO_MenuStructureEditor : Editor {
 
-        private SOMenuStructure managerScript;
+        private SO_MenuStructure managerScript;
 
         GUIStyle foldoutStyle1, foldoutStyle2;
         bool     isSetup = false;
@@ -16,7 +16,7 @@ namespace CustomPieMenu {
         int      buttonCount;
 
         void OnEnable() {
-            managerScript = (SOMenuStructure)target;
+            managerScript = (SO_MenuStructure)target;
         }
 
         bool SetupReferences() {
@@ -47,76 +47,90 @@ namespace CustomPieMenu {
                 return;
             }
 
-            DrawDefaultInspector();
-            EditorGUILayout.LabelField("Level 0 : " + managerScript.Root.SubNodes.Count);
-
             if (GUILayout.Button("Clear")) {
-                managerScript.Buttons = new System.Collections.Generic.List<ButtonModel>(1) { new ButtonModel() };
+                Undo.RecordObject(target, "Clear data");
+                managerScript.Buttons = new System.Collections.Generic.List<ButtonModel>(1) { new ButtonModel("@") };
                 managerScript.Root.SubNodes.Clear();
                 isSetup = SetupReferences();
+                serializedObject.ApplyModifiedProperties();
             }
 
             DisplayMenuByNode(managerScript.Root);
 
+            if (GUI.changed) {
+                EditorUtility.SetDirty(target);
+            }
         }
 
-
-        private void DisplayMenuByNode(SOMenuStructure.Node _node) {
+        private void DisplayMenuByNode(Node _node) {
 
             if (!isSetup) {
                 isSetup = SetupReferences();
                 return;
             }
 
-            ButtonModel button = managerScript.GetButtonFromNode(_node);
+            byte level = _node.Level;
 
-            int  nodeCount  = _node.SubNodes.Count;
-            byte level      = _node.Level;
-            byte id         = _node.ID;
-            int  foldId     = managerScript.Buttons.IndexOf(button);
+            ButtonModel button = managerScript.GetButtonFromNode(_node);
+            int         foldId = managerScript.Buttons.IndexOf(button);
 
             if (foldId < 0)
                 return;
 
+            /** Header (Current Button) **/
             EditorGUILayout.BeginHorizontal();
             showDetails[foldId] = EditorGUILayout.Foldout(showDetails[foldId], "Level " + level, foldoutStyle1);
-            managerScript.GetButtonFromNode(_node).name = EditorGUILayout.TextField(button.name);
+            button.name         = EditorGUILayout.TextField(button.name);
+
             if (level > 0 && GUILayout.Button("-")) {
                 managerScript.RemoveSubMenu(_node);
                 isSetup = false;
                 return;
             }
+
             EditorGUILayout.EndHorizontal();
+            /** End of the header **/
 
+            /** Details of the Button **/
             if (showDetails[foldId]) {
-                EditorGUI.indentLevel++;
-                _node.ID       = (byte)EditorGUILayout.IntField("Id ", _node.ID);
-                _node.ParentID = (byte)EditorGUILayout.IntField("Parent Id ", _node.ParentID);
-                managerScript.GetButtonFromNode(_node).icon    = (Sprite)EditorGUILayout.ObjectField("Sprite", managerScript.GetButtonFromNode(_node).icon, typeof(Sprite), false);
-                //button.index       = (byte)EditorGUILayout.IntField("Id ", button.index);
-                //button.parentIndex = (byte)EditorGUILayout.IntField("Parent Id ", button.parentIndex);
-                //button.icon        = (Sprite)EditorGUILayout.ObjectField("Sprite", button.icon, typeof(Sprite), false);
+            EditorGUI.indentLevel++;
+                // Base data (Ids) and related sprite
+                EditorGUILayout.LabelField("Id "+ _node.Id);
+                EditorGUILayout.LabelField("ParentId " + _node.GetParentId());
 
+                EditorGUI.BeginChangeCheck();
+                Sprite icon = (Sprite)EditorGUILayout.ObjectField("Sprite", button.icon, typeof(Sprite), false);
+                if (EditorGUI.EndChangeCheck()) {
+                    button.icon = icon;
+                }
+
+                EditorGUILayout.Separator();
+                GUILayout.Space(10);
+
+                // Foldout label to hide/show sub-menus
                 EditorGUILayout.BeginHorizontal();
                 showSubMenus[foldId] = EditorGUILayout.Foldout(showSubMenus[foldId], "Related Sub-menus", foldoutStyle2);
+                // and '+' button to create new ones
                 if (GUILayout.Button("+")) {
                     managerScript.AddNewSubMenu(_node);
                     isSetup = false;
                     return;
                 }
                 EditorGUILayout.EndHorizontal();
-
+                
+                // List related sub-menus
                 if (showSubMenus[foldId]) {
                     for (int i = 0; i < _node.SubNodes.Count; i++) {
                         DisplayMenuByNode(_node.SubNodes[i]);
                     }
                 }
 
-                EditorGUI.indentLevel--;
+            EditorGUI.indentLevel--;
 
             }
-        }
 
+        }
+  
         private void OnDisable() {
             isSetup = false;
         }
