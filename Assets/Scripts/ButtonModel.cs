@@ -1,55 +1,23 @@
-﻿using System;
-using UnityEngine;
-using System.Collections.Generic;
+﻿using UnityEngine;
+using UnityEngine.Events;
 
 namespace CustomPieMenu {
 
     [System.Serializable]
     public class ButtonModel {
 
-        public enum EState { CREATED = 0, INITIALIZED, FOLDED, MOVING, UNFOLDED }
+        public enum EState { CREATED = 0, MOVING, IN_PLACE, ACTIVE, WAITING }
 
         public string name = "";
         public Sprite icon;
 
         [SerializeField] private string id;
-        private EState state = EState.CREATED;
+        public UnityEvent ActionOnClick;
+
+        private EState state         = EState.CREATED;
         private EState previousState = EState.CREATED;
         private Vector3 startPoint;
         private Vector3 targetPoint;
-
-        //[SerializeField] private byte childrenNb;
-        private bool isInPlace;
-        private bool isActive;
-
-        public bool IsInPlace {
-            get { return isInPlace; }
-            set {
-                isInPlace = value;
-
-                if (isInPlace) {
-                    switch (previousState) {
-                        case EState.CREATED :
-                        case EState.INITIALIZED:
-                            state = EState.UNFOLDED;
-                            break;
-
-                        case EState.UNFOLDED:
-                            state = EState.FOLDED;
-                            break;
-
-                        default:
-                            break;
-                    }
-                    previousState = state;
-                }
-            }
-        }
-
-        public bool IsActive {
-            get { return isActive; }
-            set { isActive = value; }
-        }
 
         public Vector3 StartPoint {
             get { return startPoint; }
@@ -63,7 +31,10 @@ namespace CustomPieMenu {
 
         public EState State {
             get { return state; }
-            set { state = value; }
+            set {
+                previousState = state;
+                state = value;
+                }
         }
 
         public string Id {
@@ -71,43 +42,29 @@ namespace CustomPieMenu {
         }
 
 
-
-        public ButtonModel(string _id, bool _isStatic) {
+        public ButtonModel(string _id) {
             id          = _id;
+
+            if (_id.Equals("@")) {
+                state = EState.IN_PLACE;
+            }
+
             name        = "New menu level " + GetLevel();
-            isInPlace   = _isStatic;
         }
-
-        public ButtonModel(string _id) : this(_id, false) {
-            isInPlace = true;
-        }
-
-
-        public ButtonModel() : this("@") {
-
-        }
-
-        //public ButtonModel(byte _index, byte _level, Vector3 _startPoint, byte _parentIndex) {
-        //    index       = _index;
-        //    levelInMenu = _level;
-        //    startPoint  = _startPoint;
-        //    parentIndex = _parentIndex;
-
-        //    name = "New menu level " + _level;
-        //}
 
         public void Reset() {
             state           = EState.CREATED;
             previousState   = EState.CREATED;
             startPoint      = Vector3.zero;
             targetPoint     = Vector3.zero;
-
-            isInPlace = GetLevel() == 0 ? true : false;
-            isActive  = false;
         }
 
-        public int GetLevel() {
-            return id.Length - 1;
+        public byte GetLevel() {
+            return (byte)(id.Length - 1);
+        }
+
+        public bool IsChildOf(string _id) {
+            return id.Contains(_id) && !id.Equals(_id);
         }
 
         //public void SetNewStartPoint(Vector3 _startPoint) {
@@ -118,8 +75,13 @@ namespace CustomPieMenu {
             targetPoint = _targetPoint;
         }
 
+
         public override string ToString() {
-            return GetType() + " (ID : " + Id + ", Level : " + Id.Length + ", parentID : " + Id.Substring(0, Id.Length - 1) + ")";
+            return GetType() + " (ID : " + Id + ", Level : " + (Id.Length - 1) + ", parentID : " + Id.Substring(0, Id.Length - 1) + ")";
+        }
+
+        public void HandleClickAction() {
+            Debug.Log("Click on " + id);
         }
 
     }

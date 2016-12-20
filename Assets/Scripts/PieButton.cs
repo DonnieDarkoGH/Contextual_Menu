@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Events;
 using System.Collections;
 
 namespace CustomPieMenu {
@@ -8,6 +9,7 @@ namespace CustomPieMenu {
 
         public delegate bool PieButtonEvent(PieButton thisButton);
         public event PieButtonEvent OnClicked;
+        public event PieButtonEvent OnButtonInPlace;
 
         [SerializeField] private ButtonModel btnModel;
 
@@ -17,6 +19,12 @@ namespace CustomPieMenu {
 
         Vector3 movingPosition = Vector3.zero;
         Vector3 origin         = Vector3.zero;
+
+        Vector3 startPoint      = Vector3.zero;
+        Vector3 targetPoint     = Vector3.zero;
+
+        public bool  IsInPlace = false;
+        private bool shouldBeDestroyed = false;
 
         RectTransform rectTransform;
 
@@ -34,14 +42,42 @@ namespace CustomPieMenu {
             get { return btnModel; }
         }
 
+        public Vector3 StartPoint {
+            get {
+                return startPoint;
+            }
+
+            set {
+                startPoint = value;
+            }
+        }
+
+        public Vector3 TargetPoint {
+            get {
+                return targetPoint;
+            }
+
+            set {
+                targetPoint = value;
+            }
+        }
+
+        public bool ShouldBeDestroyed { get { return shouldBeDestroyed; } }
+
         // Use this for initialization
         public void Init(Node _node, float _angularPos, float _parentAngle, bool _isLinked = false) {
-            Debug.Log("<b>PieButton</b> Init from node : " + _node.ToString());
+            //Debug.Log("<b>PieButton</b> Init from node : " + _node.ToString());
             //Debug.Log("<b>PieButton</b> Init : " + name + ", to reach " + _endPosition);
             //Debug.Log(transform.position + ", "+  transform.localPosition);
 
-            btnModel       = MenuManager.Instance.GetBtnModel(_node);
-            btnModel.State = ButtonModel.EState.INITIALIZED;
+            btnModel = MenuManager.Instance.GetBtnModel(_node);
+
+            if (_node.Id.Equals("@")) {
+                btnModel.State = ButtonModel.EState.IN_PLACE;
+            }
+            else {
+                btnModel.State = ButtonModel.EState.CREATED;
+            }
 
             if (rectTransform == null) {
                 rectTransform = GetComponent<RectTransform>();
@@ -57,7 +93,8 @@ namespace CustomPieMenu {
             height    = rectTransform.rect.height;
             baseAngle = _angularPos;
 
-            //Debug.Log(btnModel.IsInPlace);
+            btnModel.StartPoint = rectTransform.anchoredPosition;
+
             CalculateTrajectory();
             
             if (_isLinked) {
@@ -65,14 +102,6 @@ namespace CustomPieMenu {
             }
 
             startTime = Time.time;
-
-            //Type myType = typeof(RectTransform);
-            //PropertyInfo[] fieldsInfo = myType.GetProperties();
-
-            //foreach (var pi in fieldsInfo) {
-            //    Debug.Log(pi.ToString() + " : " + pi.GetValue(rectTransform, null));
-
-            //}
 
         }
 
@@ -87,56 +116,65 @@ namespace CustomPieMenu {
                 yield return null;
             }
 
-            movingPosition                 = btnModel.TargetPoint;
+            btnModel.State = ButtonModel.EState.IN_PLACE;
+
+            movingPosition                 = _end;
             rectTransform.anchoredPosition = movingPosition;
 
-            btnModel.IsInPlace = true;
+            Vector3 tmp = startPoint;
+            startPoint  = targetPoint;
+            targetPoint = tmp;
+
+            OnButtonInPlace(this);
         }
-
-        //public bool SetPositionInScreen(Vector2 _position) {
-        //    //Debug.Log("<b>PieButton</b> SetPositionInScreen to " + _position);
-
-        //    if (rectTransform != null) {
-        //        rectTransform.anchoredPosition = _position;
-        //        btnModel.SetNewStartPoint(_position);
-        //        //startPoint = _position;
-        //        return true;
-        //    }
-
-        //    return false;
-        //}
-
 
         public void HandleClick() {
             //Debug.Log("<b>PieButton</b> HandleClick");
 
             OnClicked(this);
 
-            btnModel.IsActive = !btnModel.IsActive;
             icon.gameObject.transform.SetAsLastSibling();
+            gameObject.transform.SetAsLastSibling();
         }
 
         private void CalculateTrajectory() {
-            Debug.Log("<b>PieButton</b> CalculateTrajectory from " + btnModel.StartPoint);
+            //Debug.Log("<b>PieButton</b> CalculateTrajectory from " + btnModel.StartPoint);
 
             if(btnModel == null) {
                 throw new System.Exception("Button model must be set in PieButton to calculate the trajectory");
             }
 
-            btnModel.StartPoint = rectTransform.anchoredPosition;
-            float   spacing     = MenuManager.Instance.Spacing;
-            Vector3 targetPoint = Vector3.zero;
-            
-            if (btnModel.IsInPlace) {
+            startPoint = btnModel.StartPoint;
+
+            if (btnModel.State == ButtonModel.EState.IN_PLACE) {
                 targetPoint = btnModel.StartPoint;
             }
             else {
-                targetPoint = btnModel.StartPoint + new Vector3(height * spacing * Mathf.Sin(baseAngle * Mathf.Deg2Rad),
-                                                                width * spacing * Mathf.Cos(baseAngle * Mathf.Deg2Rad),
-                                                                0);
+                float spacing   = MenuManager.Instance.Spacing;
+                targetPoint     = btnModel.StartPoint + new Vector3(height * spacing * Mathf.Sin(baseAngle * Mathf.Deg2Rad),
+                                                                    width * spacing * Mathf.Cos(baseAngle * Mathf.Deg2Rad),
+                                                                    0);
             }
 
             btnModel.SetTargetPoint(targetPoint);
+
+            startPoint =  btnModel.StartPoint;
+            targetPoint = btnModel.TargetPoint;
+        }
+
+        public bool StartAnimation(bool _shouldBeDestroyed = false) {
+            //Debug.Log("<b>PieButton</b> StartAnimation");
+
+            if (btnModel.State == ButtonModel.EState.MOVING)
+                return false;
+
+            shouldBeDestroyed = _shouldBeDestroyed;
+
+            startTime = Time.time;
+
+            StartCoroutine(MoveButton(startPoint, targetPoint));
+
+            return true;
         }
 
         private void CreateLink(float _rotation) {
@@ -159,48 +197,17 @@ namespace CustomPieMenu {
             linkRef.sizeDelta = new Vector2(2, distance);
         }
 
-        public bool StartAnimation() {
-            Debug.Log("<b>PieButton</b> StartAnimation");
-
-            Vector3 start = btnModel.StartPoint;
-            Vector3 end   = btnModel.TargetPoint;
-
-            switch (btnModel.State) 
-            {
-                case ButtonModel.EState.MOVING:
-                    return false;
-
-                case ButtonModel.EState.UNFOLDED:
-                    start = btnModel.TargetPoint;
-                    end   = btnModel.StartPoint;
-                    break;
-
-                default:
-                    break;
-            }
-
-            Debug.Log("from " + start + " to " + end);
-            StartCoroutine(MoveButton(start,end));
-
-            return true;
-        }
-        //private void Update() {
-
-        //    state = btnModel.State;
-
-        //    if (isInPlace)
-        //        return;
-
-            //    if(rectTransform != null) {
-            //        rectTransform.anchoredPosition = movingPosition;
-            //        UpdateLink();
-            //    }
-
-        //}
-
         private float TimeRatio() {
             return (Time.time - startTime) * MenuManager.Instance.TweenSpeed ;// * (1.0f - 0.1f * btnModel.index);
         }
+
+        //private void Start() {
+        //    if (btnModel.ButtonAction == null) {
+        //        btnModel.ButtonAction = new UnityEngine.Events.UnityEvent();
+        //    }
+
+        //    btnModel.ButtonAction.AddListener(btnModel.HandleClickAction);
+        //}
 
         private void OnDisable() {
             if(OnClicked != null) {

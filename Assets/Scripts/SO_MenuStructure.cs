@@ -7,7 +7,7 @@ namespace CustomPieMenu {
     [CreateAssetMenu(fileName = "NewMenu", menuName = "Tools/ContextualMenu/NewMenu", order = 1)]
     public class SO_MenuStructure : ScriptableObject {
 
-        public List<ButtonModel> Buttons = new List<ButtonModel>(1) { new ButtonModel()};
+        public List<ButtonModel> Buttons = new List<ButtonModel>(1) { new ButtonModel("@")};
         public Node Root = new Node();
 
         public ButtonModel GetButtonFromNode(Node _node) {
@@ -27,6 +27,10 @@ namespace CustomPieMenu {
 
         public ButtonModel[] GetSubMenuFromNode(Node _node) {
 
+            if(_node == null) {
+                return new ButtonModel[0];
+            }
+
             byte          len      = (byte)_node.SubNodes.Count;
             ButtonModel[] subMenus = new ButtonModel[len];
 
@@ -45,8 +49,7 @@ namespace CustomPieMenu {
 
             Node        newNode = _node.AddSubNode();
             ButtonModel newBtn  = new ButtonModel(newNode.Id);
-            //ButtonModel newBtn = new ButtonModel(newId, (byte)(level+1), position, id);
-            //Debug.Log(newBtn.ToString());
+
             Buttons.Add(newBtn);
 
             return true;
@@ -137,14 +140,16 @@ namespace CustomPieMenu {
         }
 
         public Node GetNode(string _id) {
+            //Debug.Log("<b>Node</b> GetNode " + _id + " from " +ToString());
 
             int len = subNodes.Count;
 
-            if (id.Equals(_id))
+            if (id.Equals(_id)) {
                 return this;
-
+            }
+                
             for (int i = 0; i < len; i++) {
-                if(subNodes[i].GetNode(_id) != null) {
+                if(subNodes[i].GetNode(_id) != null && subNodes[i].Id == _id) {
                     return subNodes[i];
                 }
             }
@@ -162,7 +167,7 @@ namespace CustomPieMenu {
         }
         
         public bool IsChildOf(Node _node) {
-            return id.StartsWith(_node.Id);
+            return id.StartsWith(_node.Id) && !id.Equals(_node.Id);
         }
 
         public Node AddSubNode() {
@@ -173,7 +178,7 @@ namespace CustomPieMenu {
             for (byte i = 0; i < nodesCount; i++) {
 
                 byte byteIndex = IdToByteIndex(SubNodes[i].Id);
-                Debug.Log("i = " + i + ", byteIndex = " + byteIndex);
+                //Debug.Log("i = " + i + ", byteIndex = " + byteIndex);
 
                 if (i < byteIndex) {
                     newIndex = i;
@@ -181,7 +186,7 @@ namespace CustomPieMenu {
                 }
             }
 
-            Debug.Log("newIndex = " + newIndex);
+            //Debug.Log("newIndex = " + newIndex);
             Node subNode = new Node(id, newIndex);
             //Debug.Log(subNode.ToString());
 

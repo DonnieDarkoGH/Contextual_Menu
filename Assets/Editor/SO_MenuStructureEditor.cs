@@ -1,6 +1,7 @@
 ﻿using System;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace CustomPieMenu {
     [CustomEditor(typeof(SO_MenuStructure))]
@@ -46,6 +47,8 @@ namespace CustomPieMenu {
             if (buttonCount == 0) {
                 return;
             }
+
+            DrawDefaultInspector();
 
             if (GUILayout.Button("Clear")) {
                 Undo.RecordObject(target, "Clear data");
@@ -97,7 +100,7 @@ namespace CustomPieMenu {
                 // Base data (Ids) and related sprite
                 EditorGUILayout.LabelField("Id "+ _node.Id);
                 EditorGUILayout.LabelField("ParentId " + _node.GetParentId());
-
+                
                 EditorGUI.BeginChangeCheck();
                 Sprite icon = (Sprite)EditorGUILayout.ObjectField("Sprite", button.icon, typeof(Sprite), false);
                 if (EditorGUI.EndChangeCheck()) {
