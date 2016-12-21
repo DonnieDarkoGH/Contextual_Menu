@@ -13,8 +13,8 @@ namespace CustomPieMenu {
         public ButtonModel GetButtonFromNode(Node _node) {
             //Debug.Log("<b>SOMenuStructure</b> GetButtonFromNode " + _node.ToString());
 
-            byte len    = (byte)Buttons.Count;
-            string id   = _node.Id;
+            byte len = (byte)Buttons.Count;
+            string id = _node.Id;
 
             for (byte i = 0; i < len; i++) {
                 if (Buttons[i].Id.Equals(id)) {
@@ -25,21 +25,21 @@ namespace CustomPieMenu {
             return null;
         }
 
-        public ButtonModel[] GetSubMenuFromNode(Node _node) {
+        //public ButtonModel[] GetSubMenuFromNode(Node _node) {
 
-            if(_node == null) {
-                return new ButtonModel[0];
-            }
+        //    if(_node == null) {
+        //        return new ButtonModel[0];
+        //    }
 
-            byte          len      = (byte)_node.SubNodes.Count;
-            ButtonModel[] subMenus = new ButtonModel[len];
+        //    byte          len      = (byte)_node.SubNodes.Count;
+        //    ButtonModel[] subMenus = new ButtonModel[len];
 
-            for (byte i = 0; i < len; i++) {
-                subMenus[i] = GetButtonFromNode(_node.SubNodes[i]);
-            }
+        //    for (byte i = 0; i < len; i++) {
+        //        subMenus[i] = GetButtonFromNode(_node.SubNodes[i]);
+        //    }
 
-            return subMenus;
-        }
+        //    return subMenus;
+        //}
 
         public bool AddNewSubMenu(Node _node) {
             Debug.Log("<b>SOMenuStructure</b> AddNewSubMenu to " + _node.ToString());
@@ -83,22 +83,13 @@ namespace CustomPieMenu {
             return true;
         }
 
-        public void ResetAllButtons() {
+        //public void ResetAllButtons() {
 
-            int len = Buttons.Count;
-            for(int i = 0; i < len; i++) {
-                Buttons[i].Reset();
-            }
-        }
-
-        public bool ChangeButtonIndex(ButtonModel _button, byte _newIndex) {
-            Debug.Log("<b>SOMenuStructure</b> ChangeButtonIndex of " + _button.name + " to " + _newIndex);
-
-
-            return true;
-        }
-
-
+        //    int len = Buttons.Count;
+        //    for(int i = 0; i < len; i++) {
+        //        Buttons[i].Reset();
+        //    }
+        //}
     }
 
     [System.Serializable]
@@ -144,13 +135,14 @@ namespace CustomPieMenu {
 
             int len = subNodes.Count;
 
+            //Debug.Log(id.Equals(_id));
             if (id.Equals(_id)) {
                 return this;
             }
                 
             for (int i = 0; i < len; i++) {
-                if(subNodes[i].GetNode(_id) != null && subNodes[i].Id == _id) {
-                    return subNodes[i];
+                if(subNodes[i].GetNode(_id) != null) {
+                    return subNodes[i].GetNode(_id);
                 }
             }
 

@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 
 namespace CustomPieMenu {
 
@@ -7,17 +8,13 @@ namespace CustomPieMenu {
         enum ETweenMode { LINEAR, EASE_IN, CURVE }
         private static MenuManager instance;
 
-        [SerializeField] SO_MenuStructure   menu;
-        [SerializeField] GameObject         buttonPrefab = null;
+        //[SerializeField] SO_MenuStructure   menu;
+        [SerializeField] ButtonsManager     buttonsManagerRef = null;
+        [SerializeField] GameObject         buttonPrefab      = null;
         [SerializeField] ETweenMode         TweeningMode;
         [SerializeField] [Range(1.0f, 5.0f)]  float spacing     = 1.5f;
         [SerializeField] [Range(1.0f, 10.0f)] float tweenSpeed  = 3.5f;
         [SerializeField] AnimationCurve TweeningCurve = AnimationCurve.Linear(0.0f, 0.0f, 1.0f,1.0f);
-
-        private uint    currentLevel    = 0;
-        private int     targetLevel     = -1;
-        private string  retractToNodeId = "&";
-        private string  exceptNodeId    = "&";
 
         public static MenuManager Instance {
             get {
@@ -44,26 +41,28 @@ namespace CustomPieMenu {
                 instance = this;
             }
 
-            if(menu == null) {
-                Debug.LogError("No context for menu");
-                return;
+            if(buttonsManagerRef == null) {
+                buttonsManagerRef = GetComponent<ButtonsManager>();
             }
+            buttonsManagerRef.OnButtonsUnfolding += UnfoldMenu;
+            buttonsManagerRef.OnButtonsFoldingUp += FoldUpMenu;
+
+
+            //if(menu == null) {
+            //    Debug.LogError("No context for menu");
+            //    return;
+            //}
 
             GameObject newBtnGo = Instantiate(buttonPrefab, Vector3.zero, Quaternion.identity, transform) as GameObject;
             PieButton  newBtn   = newBtnGo.GetComponent<PieButton>();
 
             if (newBtn != null) {
-                newBtn.OnClicked += HandleClick;
+                //newBtn.OnClicked += HandleClick;
                 newBtn.GetComponent<RectTransform>().anchoredPosition = Vector3.zero;
-                newBtn.Init(_node : menu.Root, _angularPos : 0, _parentAngle: 0, _isLinked : false);
+                //newBtn.Init(_node : menu.Root, _angularPos : 0, _parentAngle: 0, _isLinked : false);
+                newBtn.Init(_btnModel: buttonsManagerRef.GetRootButton(), _angularPos: 0, _isLinked: false);
             }
 
-        }
-	
-        public ButtonModel GetBtnModel(Node _node) {
-            //Debug.Log("<b>ButtonManager</b> GetBtnModel from " + _node.ToString());
-            
-            return menu.GetButtonFromNode(_node);
         }
 
         public void CreateNewMenu() {
@@ -72,10 +71,12 @@ namespace CustomPieMenu {
             SO_MenuStructure.CreateInstance("SO_MenuStructure");
         }
 
-        public void UnsuscribeButtonEvent(PieButton _button) {
-            _button.OnClicked       -= HandleClick;
-            _button.OnButtonInPlace -= HandleEndOfAnimation;
-        }
+        //public void UnsuscribeButtonEvent(PieButton _button) {
+        //    _button.OnClicked       -= HandleClick;
+        //    _button.OnButtonInPlace -= HandleEndOfAnimation;
+        //}
+
+        
 
         public Vector3 TweenPosition(Vector3 _startPoint, Vector3 _targetPoint, float delta) {
 
@@ -102,34 +103,102 @@ namespace CustomPieMenu {
             return movingPosition;
         }
 
-        private PieButton GetPieButtonObjectFromId(string _btnModelId) {
-            //Debug.Log("<b>ButtonManager</b> GetPieButtonObjectFromId from " + _btnModelId);
+        private void UnfoldMenu(ButtonModel _button, ButtonModel[] _subButtons) {
+            //Debug.Log("<b>MenuManager</b> UnfoldMenu from " + _button.ToString());
 
-            PieButton[] childrenPB = GetComponentsInChildren<PieButton>();
-            int len = childrenPB.Length;
+            int len = _subButtons.Length;
+            if (len == 0)
+                return;
 
-            for (uint i = 0; i < len; i++) {
-                if (childrenPB[i].BtnModel.Id.Equals(_btnModelId)) {
-                    return childrenPB[i];
-                }
+            float   baseAngle  = _button.BaseAngle;
+            Vector3 startPoint = _button.EndPoint;
+            float   angularPos = 0.0f;
+
+            for (int i = 0; i < len; i++) {
+                angularPos = GetAngleByIndex(i, len, baseAngle);
+                _subButtons[i].State = ButtonModel.EState.DEPLOYING;
+                CreateButtonObject(_subButtons[i], startPoint, angularPos);
             }
-
-            return null;
         }
 
-        private ButtonModel[] GetSubButtons(ButtonModel _btnModel) {
-            //Debug.Log("<b>ButtonManager</b> GetSubButtons from " + _btnModel.ToString());
+        private void FoldUpMenu(ButtonModel _button, ButtonModel[] _subButtons) {
+            //Debug.Log("<b>MenuManager</b> FoldUpMenu to " + _button.ToString());
 
-            ButtonModel[] subButtons = new ButtonModel[0];
+            int len = _subButtons.Length;
+            for (int i = 0; i < len; i++) {
 
-            if (_btnModel != null) {
-                Node node  = menu.Root.GetNode(_btnModel.Id);
-                if(node != null) {
-                    subButtons = menu.GetSubMenuFromNode(node);
+                if(_subButtons[i].State != ButtonModel.EState.IN_PLACE) {
+                    continue;
                 }
+
+                _subButtons[i].State = ButtonModel.EState.RETRACTING;
+                _subButtons[i].StartAnimation();
+            }
+        }
+
+        private void CreateButtonObject(ButtonModel _button, Vector3 _startPoint, float _angularPos, string _idToIgnore = "&") {
+            //Debug.Log("<b>MenuManager</b> CreateSubButtons from " + _node.Id);
+
+            if (_button.Id.Equals(_idToIgnore))
+                return;
+
+            _button.BaseAngle = _angularPos;
+
+            GameObject newBtn = Instantiate(buttonPrefab, Vector3.zero, Quaternion.identity) as GameObject;
+
+            newBtn.gameObject.name = "btn " + _button.Id;
+            newBtn.gameObject.transform.SetParent(transform);
+            newBtn.GetComponent<RectTransform>().anchoredPosition = _startPoint;
+
+            PieButton btnComp = newBtn.GetComponent<PieButton>();
+            btnComp.Init(_button, _angularPos, true);
+            //btnComp.OnClicked += HandleClick;
+            btnComp.OnButtonInPlace += HandleEndOfAnimation;
+
+            btnComp.StartAnimation(_button);
+        }
+
+        private void HandleEndOfAnimation(PieButton _button) {
+            //Debug.Log("<b>MenuManager</b> HandleEndOfAnimation for " + _button.gameObject.name);
+
+            ButtonModel btnModel = _button.BtnModel;
+
+            switch (btnModel.State) {
+
+                case ButtonModel.EState.RETRACTING :
+                    _button.OnButtonInPlace -= HandleEndOfAnimation;
+                    Destroy(_button.gameObject);
+                    break;
+
+                default:
+                    break;
             }
 
-            return subButtons;
+            buttonsManagerRef.HandleEndOfAnimation(btnModel);
+
+        }
+
+
+        private void OnDisable() {
+            //Debug.Log("<b>MenuManager</b> OnDisable");
+            //menu.ResetAllButtons();
+
+            if (buttonsManagerRef == null) {
+                buttonsManagerRef.OnButtonsUnfolding -= UnfoldMenu;
+                buttonsManagerRef.OnButtonsFoldingUp -= FoldUpMenu;
+            }
+        }
+
+        private float GetAngleByIndex(int _index, int _btnNumber, float _baseAngle) {
+            //Debug.Log("<b>MenuManager</b> GetAngleByIndex for " + _btnNumber + " buttons");
+
+            // Angle value is 45° for up to 7 buttons, then it is divided by 2 for each full range of 8 buttons
+            float angularInc = 45.0f / (1 + _btnNumber / 8);
+            // 1st index is in line with the parent, then right, then left and so on... 
+            int sign = _index % 2 == 0 ? -1 : 1;
+            int inc = Mathf.CeilToInt(_index * 0.5f) * sign;
+
+            return inc * angularInc + _baseAngle;
         }
 
         Vector3 Linear(Vector3 _startPoint, Vector3 _targetPoint, float delta) {
@@ -144,7 +213,38 @@ namespace CustomPieMenu {
             return (_targetPoint - _startPoint) * TweeningCurve.Evaluate(delta) + _startPoint;
         }
 
-        private bool HandleClick(PieButton _button) {
+
+        //private PieButton GetPieButtonObjectFromId(string _btnModelId) {
+        //    //Debug.Log("<b>ButtonManager</b> GetPieButtonObjectFromId from " + _btnModelId);
+
+        //    PieButton[] childrenPB = GetComponentsInChildren<PieButton>();
+        //    int len = childrenPB.Length;
+
+        //    for (uint i = 0; i < len; i++) {
+        //        if (childrenPB[i].BtnModel.Id.Equals(_btnModelId)) {
+        //            return childrenPB[i];
+        //        }
+        //    }
+
+        //    return null;
+        //}
+
+        //private ButtonModel[] GetSubButtons(ButtonModel _btnModel) {
+        //    //Debug.Log("<b>ButtonManager</b> GetSubButtons from " + _btnModel.ToString());
+
+        //    ButtonModel[] subButtons = new ButtonModel[0];
+
+        //    if (_btnModel != null) {
+        //        Node node  = menu.Root.GetNode(_btnModel.Id);
+        //        if(node != null) {
+        //            subButtons = menu.GetSubMenuFromNode(node);
+        //        }
+        //    }
+
+        //    return subButtons;
+        //}
+
+        /*private bool HandleClick(PieButton _button) {
             //Debug.Log("<b>ButtonManager</b> HandleClick " + _button.gameObject.name);
 
             if (_button == null)
@@ -217,7 +317,7 @@ namespace CustomPieMenu {
 
             uint    nbSubBtn    = (uint)_node.SubNodes.Count;
             float   baseAngle   = _button.BaseAngle;
-            Vector3 startPoint  = _button.BtnModel.TargetPoint;
+            Vector3 startPoint  = _button.BtnModel.EndPoint;
 
             GameObject newBtn;
             PieButton  btnComp;
@@ -246,10 +346,10 @@ namespace CustomPieMenu {
 
         }
 
-        private void RetractAll() {
-            //Debug.Log("<b>ButtonManager</b> RetractAll");
-            RetractAll(retractToNodeId, exceptNodeId, targetLevel);
-        }
+        //private void RetractAll() {
+        //    //Debug.Log("<b>ButtonManager</b> RetractAll");
+        //    RetractAll(retractToNodeId, exceptNodeId, targetLevel);
+        //}
 
         private void RetractAll(string _id, string _exceptId = "&", int _upToLevel = -1) {
             //Debug.Log("<b>ButtonManager</b> RetractAll from " + _id);
@@ -303,22 +403,9 @@ namespace CustomPieMenu {
             btnComp.StartAnimation();
         }
 
-        private float GetAngleByIndex(uint _index, uint _btnNumber, float _baseAngle) {
-            //Debug.Log("<b>PieButton</b> GetAngleByIndex for " + _btnNumber + " buttons");
 
-            // Angle value is 45° for up to 7 buttons, then it is divided by 2 for each full range of 8 buttons
-            float angularInc = 45.0f / (1 + _btnNumber / 8); 
-            // 1st index is in line with the parent, then right, then left and so on... 
-            int sign = _index % 2 == 0 ? -1 : 1;     
-            int inc  = Mathf.CeilToInt(_index * 0.5f) * sign;
 
-            return inc * angularInc + _baseAngle;
-        }
-
-        private void OnDisable() {
-            //Debug.Log("<b>PieButton</b> OnDisable");
-            menu.ResetAllButtons();
-        }
+        }*/
 
     }
 }
