@@ -1,14 +1,16 @@
 ﻿using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using System.Collections;
+using System.Reflection;
 
-namespace CustomPieMenu {
+
+namespace ContextualMenu {
 
     public class PieButton : MonoBehaviour {
 
-        public delegate void PieButtonEvent(PieButton thisButton);
-        public event PieButtonEvent OnButtonInPlace;
+        private UnityAction<ButtonModel, ButtonsManager.EButtonActionState> ButtonModelAction;
 
         [SerializeField] private ButtonModel   btnModel;
         [SerializeField] private RectTransform linkRef = null;
@@ -59,8 +61,12 @@ namespace CustomPieMenu {
         public void Init(ButtonModel _btnModel, float _angularPos, bool _isLinked = false) {
             //Debug.Log("<b>PieButton</b> Init from model : " + _btnModel.ToString());
 
+            if (ButtonModelAction == null) {
+                ButtonModelAction = new UnityAction<ButtonModel, ButtonsManager.EButtonActionState>(StartAnimation);
+            }
+
             btnModel = _btnModel;
-            btnModel.OnAnimationStarted += StartAnimation;
+            MenuEventManager.StartListening(btnModel, ButtonsManager.EButtonActionState.ANIMATION_STARTED, ButtonModelAction);
 
             if (rectTransform == null) {
                 rectTransform = GetComponent<RectTransform>();
@@ -70,7 +76,7 @@ namespace CustomPieMenu {
             if (icon == null) {
                 icon = GetComponentsInChildren<Image>()[2];
             }
-            icon.overrideSprite = btnModel.icon;
+            icon.overrideSprite = btnModel.Icon;
 
             width     = rectTransform.rect.width;
             height    = rectTransform.rect.height;
@@ -84,8 +90,7 @@ namespace CustomPieMenu {
                 //CreateLink(_angularPos);
             }
 
-            startTime = Time.time;
-
+            MenuEventManager.TriggerEvent(btnModel, ButtonsManager.EButtonActionState.ANIMATION_STARTED);
         }
 
         IEnumerator MoveButton(Vector3 _start, Vector3 _end) {
@@ -105,7 +110,11 @@ namespace CustomPieMenu {
             startPoint  = targetPoint;
             targetPoint = tmp;
 
-            OnButtonInPlace(this);
+            if(btnModel.State == ButtonModel.EState.RETRACTING) {
+                Destroy(gameObject.gameObject);
+            }
+
+            MenuEventManager.TriggerEvent(btnModel, ButtonsManager.EButtonActionState.ANIMATION_ENDED);
 
         }
 
@@ -115,8 +124,8 @@ namespace CustomPieMenu {
             if (btnModel.State != ButtonModel.EState.IN_PLACE)
                 return;
 
-            btnModel.HandleClickAction();
-
+            MenuEventManager.TriggerEvent(btnModel, ButtonsManager.EButtonActionState.CLICKED);
+            
             icon.gameObject.transform.SetAsLastSibling();
             gameObject.transform.SetAsLastSibling();
         }
@@ -146,9 +155,8 @@ namespace CustomPieMenu {
             targetPoint = btnModel.EndPoint;
         }
 
-        //public bool StartAnimation(bool _shouldBeDestroyed = false) {
-        public void StartAnimation(ButtonModel _btnModel) {
-            //Debug.Log("<b>PieButton</b> StartAnimation for " + _btnModel.ToString());
+        public void StartAnimation(ButtonModel _btn, ButtonsManager.EButtonActionState _state) {
+            //Debug.Log("<b>PieButton</b> StartAnimation for " + btnModel.ToString());
 
             startTime = Time.time;
 
@@ -179,17 +187,16 @@ namespace CustomPieMenu {
             return (Time.time - startTime) * MenuManager.Instance.TweenSpeed ;// * (1.0f - 0.1f * btnModel.index);
         }
 
-        //private void Start() {
-        //    if (btnModel.ButtonAction == null) {
-        //        btnModel.ButtonAction = new UnityEngine.Events.UnityEvent();
-        //    }
-
-        //    btnModel.ButtonAction.AddListener(btnModel.HandleClickAction);
-        //}
-
         private void OnDisable() {
+            //Debug.Log("<b>PieButton</b> OnDisable");
 
-            btnModel.OnAnimationStarted -= StartAnimation;
+            MenuEventManager.StopListening(btnModel, ButtonsManager.EButtonActionState.ANIMATION_STARTED, ButtonModelAction);
+        }
+
+        private void OnDestroy() {
+            //Debug.Log("<b>PieButton</b> OnDestroy");
+
+            MenuEventManager.StopListening(btnModel, ButtonsManager.EButtonActionState.ANIMATION_STARTED, ButtonModelAction);
         }
 
     }

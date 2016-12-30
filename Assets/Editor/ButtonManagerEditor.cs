@@ -1,7 +1,7 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-namespace CustomPieMenu {
+namespace ContextualMenu {
     [CustomEditor(typeof(MenuManager))]
     [CanEditMultipleObjects]
     public class MenuManagerEditor : Editor {

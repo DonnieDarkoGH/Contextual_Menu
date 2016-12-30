@@ -1,20 +1,24 @@
 ﻿using System;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 
-namespace CustomPieMenu {
+namespace ContextualMenu {
     [CustomEditor(typeof(SO_MenuStructure))]
     [CanEditMultipleObjects]
     public class SO_MenuStructureEditor : Editor {
 
-        private SO_MenuStructure managerScript;
+        private SO_MenuStructure   managerScript;
 
-        GUIStyle foldoutStyle1, foldoutStyle2;
-        bool     isSetup = false;
-        bool[]   showDetails;
-        bool[]   showSubMenus;
-        int      buttonCount;
+        private SerializedProperty eventsListInManager;
+
+        private GUIStyle foldoutStyle1, foldoutStyle2;
+        private bool     isSetup = false;
+        private bool[]   showDetails;
+        private bool[]   showSubMenus;
+        private int      buttonCount;
 
         void OnEnable() {
             managerScript = (SO_MenuStructure)target;
@@ -23,6 +27,9 @@ namespace CustomPieMenu {
         bool SetupReferences() {
 
             buttonCount = managerScript.Buttons.Count;
+
+            SerializedObject so = new SerializedObject(MenuEventManager.Instance);
+            eventsListInManager = so.FindProperty("ActionEvents");
 
             Array.Resize(ref showDetails, buttonCount);
             Array.Resize(ref showSubMenus, buttonCount);
@@ -37,8 +44,9 @@ namespace CustomPieMenu {
             return true;
         }
 
-        // Use this for initialization
         public override void OnInspectorGUI() {
+
+            serializedObject.Update();
 
             if (!isSetup) {
                 isSetup = SetupReferences();
@@ -48,12 +56,11 @@ namespace CustomPieMenu {
                 return;
             }
 
-            DrawDefaultInspector();
+            //DrawDefaultInspector();
 
             if (GUILayout.Button("Clear")) {
                 Undo.RecordObject(target, "Clear data");
-                managerScript.Buttons = new System.Collections.Generic.List<ButtonModel>(1) { new ButtonModel("@") };
-                managerScript.Root.SubNodes.Clear();
+                managerScript.ClearAll();
                 isSetup = SetupReferences();
                 serializedObject.ApplyModifiedProperties();
             }
@@ -100,15 +107,19 @@ namespace CustomPieMenu {
                 // Base data (Ids) and related sprite
                 EditorGUILayout.LabelField("Id "+ _node.Id);
                 EditorGUILayout.LabelField("ParentId " + _node.GetParentId());
-                
-                EditorGUI.BeginChangeCheck();
-                Sprite icon = (Sprite)EditorGUILayout.ObjectField("Sprite", button.icon, typeof(Sprite), false);
-                if (EditorGUI.EndChangeCheck()) {
-                    button.icon = icon;
-                }
 
-                EditorGUILayout.Separator();
-                GUILayout.Space(10);
+                int index = managerScript.Buttons.IndexOf(button);
+
+                SerializedProperty eventInterface = eventsListInManager.GetArrayElementAtIndex(index);
+                EditorGUILayout.PropertyField(eventInterface);
+
+                serializedObject.ApplyModifiedProperties();
+
+                EditorGUI.BeginChangeCheck();
+                Sprite icon = (Sprite)EditorGUILayout.ObjectField("Sprite", button.Icon, typeof(Sprite), false);
+                if (EditorGUI.EndChangeCheck()) {
+                    button.Icon = icon;
+                }
 
                 // Foldout label to hide/show sub-menus
                 EditorGUILayout.BeginHorizontal();
@@ -117,6 +128,7 @@ namespace CustomPieMenu {
                 if (GUILayout.Button("+")) {
                     managerScript.AddNewSubMenu(_node);
                     isSetup = false;
+                    showSubMenus[foldId] = true;
                     return;
                 }
                 EditorGUILayout.EndHorizontal();
@@ -133,7 +145,7 @@ namespace CustomPieMenu {
             }
 
         }
-  
+
         private void OnDisable() {
             isSetup = false;
         }

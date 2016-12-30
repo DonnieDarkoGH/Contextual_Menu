@@ -1,35 +1,61 @@
-﻿using System.Collections;
+﻿using UnityEngine;
+using UnityEngine.Events;
 using System.Collections.Generic;
-using UnityEngine;
+using ContextualMenuData;
 
-namespace CustomPieMenu {
+namespace ContextualMenu {
+
     public class ButtonsManager : MonoBehaviour {
 
-        public delegate void ButtonsManagerEvent(ButtonModel btnModel, ButtonModel[] subButtons);
-        public event ButtonsManagerEvent OnButtonsUnfolding;
-        public event ButtonsManagerEvent OnButtonsFoldingUp;
+        public enum EButtonActionState {
+            NONE = 0,
+            CLICKED,
+            RELEASED,
+            ANIMATION_STARTED,
+            ANIMATION_ENDED,
+            RETRACTING,
+            EXPANDING,
+            DESTROYED
+        }
 
-        [SerializeField] SO_MenuStructure menu;
-        [SerializeField] string[] activePathIdToArray;
+        private UnityAction<ButtonModel, EButtonActionState> ButtonModelAction;
 
+        [SerializeField] private ScriptableMenuStructure menu;
         private ButtonModel   currentActiveButton = null;
+        private ButtonModel[] currentSubButtons;
         private Stack<string> activePathIdInMenu  = new Stack<string>();
+        
+        public int CurrentLevel {
+            get { return activePathIdInMenu.Count; }
+        }
 
+        public ButtonModel[] CurrentSubButtons {
+            get { return currentSubButtons; }
+        }
 
-        void Awake() {
-            //Debug.Log("<b>ButtonsManager</b> Awake");
-             
-            if (menu == null) {
+        public void Init(ScriptableMenuStructure _menu) {
+            //Debug.Log("<b>ButtonsManager</b> Init");
+
+            if (_menu == null) {
                 Debug.LogError("No context for menu");
                 return;
             }
+            menu = _menu;
 
             ResetAllButtons();
 
+            if (ButtonModelAction == null) {
+                ButtonModelAction = new UnityAction<ButtonModel, EButtonActionState>(HandleButtonAction);
+            }
+
             int len = menu.Buttons.Count;
             for (int i = 0; i < len; i++) {
-                menu.Buttons[i].OnClick          += HandleClick;
-                menu.Buttons[i].OnAnimationEnded += HandleEndOfAnimation;
+                MenuEventManager.StartListening(menu.Buttons[i], EButtonActionState.CLICKED            , ButtonModelAction);
+                //MenuEventManager.StartListening(menu.Buttons[i], EButtonActionState.ANIMATION_STARTED, ButtonModelAction);
+                MenuEventManager.StartListening(menu.Buttons[i], EButtonActionState.ANIMATION_ENDED    , ButtonModelAction);
+                MenuEventManager.StartListening(menu.Buttons[i], EButtonActionState.RETRACTING         , MenuManager.Instance.ButtonsManagerAction);
+                MenuEventManager.StartListening(menu.Buttons[i], EButtonActionState.EXPANDING          , MenuManager.Instance.ButtonsManagerAction);
+
             }
 
             activePathIdInMenu.Clear();
@@ -38,55 +64,7 @@ namespace CustomPieMenu {
         public ButtonModel GetRootButton() {
             //Debug.Log("<b>ButtonsManager</b> GetRootButton");
 
-            ButtonModel rootButton = GetButtonFromNode(menu.Root);
-            rootButton.State       = ButtonModel.EState.IN_PLACE;
-
-            return GetButtonFromNode(menu.Root);
-        }
-
-        public ButtonModel GetButtonFromNode(Node _node) {
-            //Debug.Log("<b>ButtonsManager</b> GetButtonFromNode " + _node.ToString());
-
-            byte len = (byte)menu.Buttons.Count;
-            string id = _node.Id;
-
-            for (byte i = 0; i < len; i++) {
-                if (menu.Buttons[i].Id.Equals(id)) {
-                    return menu.Buttons[i];
-                }
-            }
-
-            return null;
-        }
-
-        public ButtonModel[] GetSubMenuFromNode(Node _node) {
-            //Debug.Log("<b>ButtonsManager</b> GetSubMenuFromNode " + _node.ToString());
-
-            if (_node == null) {
-                return null;
-            }
-
-            byte len = (byte)_node.SubNodes.Count;
-            ButtonModel[] subMenus = new ButtonModel[len];
-
-            for (byte i = 0; i < len; i++) {
-                subMenus[i] = GetButtonFromNode(_node.SubNodes[i]);
-            }
-
-            return subMenus;
-        }
-
-        public ButtonModel GetParentButton(ButtonModel _btnModel) {
-            //Debug.Log("<b>ButtonsManager</b> GetParentButton " + _btnModel.ToString());
-
-            Node btnNode    = menu.Root.GetNode(_btnModel.Id);
-            Node parentNode = null;
-
-            if (btnNode != null) {
-                parentNode = menu.Root.GetNode(btnNode.GetParentId());
-            }
-
-            return parentNode == null ? null : GetButtonFromNode(parentNode);
+            return menu.Buttons[0];
         }
 
         public void ResetAllButtons() {
@@ -123,7 +101,7 @@ namespace CustomPieMenu {
                     break;
             }
 
-            if (!IsAnimationProcessing()) {
+            if (!IsAnimationProcessing() && currentActiveButton != null) {
                 currentActiveButton.State = ButtonModel.EState.IN_PLACE;
             }
         }
@@ -144,6 +122,9 @@ namespace CustomPieMenu {
             }
 
             SwitchMenu();
+
+            MenuEventManager.Instance.TryButtonAction(menu.Buttons.IndexOf(_btnModel));
+
         }
 
         private void SwitchMenu() {
@@ -168,11 +149,11 @@ namespace CustomPieMenu {
         private bool RetractSubMenus() {
             //Debug.Log("<b>ButtonsManager</b> RetractSubMenus");
 
-            Node btnNode  = menu.Root.GetNode(activePathIdInMenu.Pop());
-            ButtonModel btnModel = GetButtonFromNode(btnNode);
+            ButtonModel btnModel = menu.GetButtonfromId(activePathIdInMenu.Pop());
+            currentSubButtons    = menu.GetChildren(btnModel);
 
-            if (btnNode.SubNodes.Count > 0) {
-                OnButtonsFoldingUp(btnModel, GetSubMenuFromNode(btnNode));
+            if(currentSubButtons.Length > 0) {
+                MenuEventManager.TriggerEvent(btnModel, EButtonActionState.RETRACTING);
             }
             else {
                 btnModel.State = ButtonModel.EState.IN_PLACE;
@@ -185,10 +166,10 @@ namespace CustomPieMenu {
         private void UnfoldMenu() {
             //Debug.Log("<b>ButtonsManager</b> UnfoldMenu from " + _btnModel.ToString());
 
-            Node btnNode = menu.Root.GetNode(currentActiveButton.Id);
+            currentSubButtons = menu.GetChildren(currentActiveButton);
 
-            if (btnNode.SubNodes.Count > 0) {
-                OnButtonsUnfolding(currentActiveButton, GetSubMenuFromNode(btnNode));
+            if (currentSubButtons.Length > 0) {
+                    MenuEventManager.TriggerEvent(currentActiveButton, EButtonActionState.EXPANDING);
             }
         }
 
@@ -206,17 +187,48 @@ namespace CustomPieMenu {
             return isProcessing;
         }
 
-        private void LateUpdate() {
-            activePathIdToArray = activePathIdInMenu.ToArray();
+        //private void LateUpdate() {
+        //    activePathIdToArray = activePathIdInMenu.ToArray();
+        //}
+
+        private void StopListening() {
+            //Debug.Log("<b>ButtonsManager</b> StopListening");
+            int len = menu.Buttons.Count;
+            for (int i = 0; i < len; i++) {
+                MenuEventManager.StopListening(menu.Buttons[i], EButtonActionState.CLICKED            , ButtonModelAction);
+                //MenuEventManager.StopListening(menu.Buttons[i], EButtonActionState.ANIMATION_STARTED, ButtonModelAction);
+                MenuEventManager.StopListening(menu.Buttons[i], EButtonActionState.ANIMATION_ENDED    , ButtonModelAction);
+                MenuEventManager.StopListening(menu.Buttons[i], EButtonActionState.RETRACTING         , MenuManager.Instance.ButtonsManagerAction);
+                MenuEventManager.StopListening(menu.Buttons[i], EButtonActionState.EXPANDING          , MenuManager.Instance.ButtonsManagerAction);
+            }
+
         }
 
         private void OnDisable() {
             //Debug.Log("<b>ButtonsManager</b> OnDisable");
+            StopListening();
+        }
 
-            int len = menu.Buttons.Count;
-            for (int i = 0; i < len; i++) {
-                menu.Buttons[i].OnClick          -= HandleClick;
-                menu.Buttons[i].OnAnimationEnded -= HandleEndOfAnimation;
+        private void OnDestroy() {
+            //Debug.Log("<b>ButtonsManager</b> OnDestroy");
+            StopListening();
+        }
+
+        private void HandleButtonAction(ButtonModel _btnModel, EButtonActionState _btnActionState) {
+            //Debug.Log("HandleButtonAction on " + _btnModel.Id + " : " + _btnActionState.ToString());
+
+            switch (_btnActionState) {
+
+                case EButtonActionState.CLICKED:
+                    HandleClick(_btnModel);
+                    break;
+
+                case EButtonActionState.ANIMATION_ENDED:
+                    HandleEndOfAnimation(_btnModel);
+                    break;
+
+                default:
+                    break;
             }
         }
 

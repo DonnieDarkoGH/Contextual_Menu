@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
+using UnityEngine.Events;
+using UnityEngine.EventSystems;
 
-namespace CustomPieMenu {
+namespace ContextualMenu {
 
     [CreateAssetMenu(fileName = "NewMenu", menuName = "Tools/ContextualMenu/NewMenu", order = 1)]
     public class SO_MenuStructure : ScriptableObject {
 
+        //public UnityEvent ActionEvent;
         public List<ButtonModel> Buttons = new List<ButtonModel>(1) { new ButtonModel("@")};
         public Node Root = new Node();
 
@@ -25,24 +29,8 @@ namespace CustomPieMenu {
             return null;
         }
 
-        //public ButtonModel[] GetSubMenuFromNode(Node _node) {
-
-        //    if(_node == null) {
-        //        return new ButtonModel[0];
-        //    }
-
-        //    byte          len      = (byte)_node.SubNodes.Count;
-        //    ButtonModel[] subMenus = new ButtonModel[len];
-
-        //    for (byte i = 0; i < len; i++) {
-        //        subMenus[i] = GetButtonFromNode(_node.SubNodes[i]);
-        //    }
-
-        //    return subMenus;
-        //}
-
         public bool AddNewSubMenu(Node _node) {
-            Debug.Log("<b>SOMenuStructure</b> AddNewSubMenu to " + _node.ToString());
+            //Debug.Log("<b>SOMenuStructure</b> AddNewSubMenu to " + _node.ToString());
 
             if (Buttons.Count == 255)
                 return false;
@@ -68,7 +56,7 @@ namespace CustomPieMenu {
 
             parentNode.RemoveSubNode(_node);
 
-            List<ButtonModel> updatedBtnList = new List<ButtonModel>(0);
+            List<ButtonModel>      updatedBtnList   = new List<ButtonModel>(0);
 
             int buttonsCount = Buttons.Count;
             for(int i = 0; i < buttonsCount; i++) {
@@ -83,13 +71,17 @@ namespace CustomPieMenu {
             return true;
         }
 
-        //public void ResetAllButtons() {
+        public void ClearAll() {
 
-        //    int len = Buttons.Count;
-        //    for(int i = 0; i < len; i++) {
-        //        Buttons[i].Reset();
-        //    }
-        //}
+            Buttons = new List<ButtonModel>(1) { new ButtonModel("@") };
+            Root.SubNodes.Clear();
+        }
+
+        public static void OnClickButton(ButtonModel _btnModel) {
+
+        }
+
+
     }
 
     [System.Serializable]
@@ -109,10 +101,17 @@ namespace CustomPieMenu {
 
         public List<Node> SubNodes {
             get { return subNodes; }
+            set { subNodes = value; }
         }
 
         public string Id {
             get { return id;}
+            set { id = value; }
+        }
+
+        public Node(string _id, List<Node> _children) {
+            id = _id;
+            subNodes = _children;
         }
 
         public Node(string _parentID, byte _index) {
