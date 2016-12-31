@@ -90,6 +90,7 @@ namespace ContextualMenuData {
             }
 
             int[] subIndexes;
+            int len = managerScript.serializedNodes.Count;
             node   = managerScript.serializedNodes[_index];
             button = managerScript.Buttons[_index];
             level  = managerScript.GetLevel(node);
@@ -109,7 +110,7 @@ namespace ContextualMenuData {
             }
 
             button.name = EditorGUILayout.TextField(button.name, GUILayout.MinWidth(100));
-            EditorGUILayout.LabelField("Id : " + node.Id);
+            EditorGUILayout.LabelField("Id : " + node.Id + "(" + node.ChildCount + " children)");
 
             if (level > 0 && GUILayout.Button("-", GUILayout.MinWidth(30))) {
                 managerScript.RemoveButton(button);
@@ -120,6 +121,7 @@ namespace ContextualMenuData {
 
             if (GUILayout.Button("Add Sub-Menu", GUILayout.MaxWidth(100))) {
                 managerScript.AddNode(node);
+                managerScript.AreDetailsVisible[_index] = true;
                 EditorUtility.SetDirty(target);
                 isSetup = false;
                 return;
@@ -168,15 +170,22 @@ namespace ContextualMenuData {
                 //managerScript.AreSubLevelVisible[_index] = EditorGUILayout.Foldout(managerScript.AreSubLevelVisible[_index], "Sub Menus", foldoutStyle2);
 
             GUILayout.EndHorizontal();
+
                 for (int i = 0; i < node.ChildCount; i++) {
+                    try {
                         Display(subIndexes[i]);
                     }
- 
+                    catch {
+                        return;
+                        //Debug.LogError("Error when accessing subnodes of " + managerScript.GetNodeInfo(node));
+                        //Debug.LogError("                    with Index " + i);
+                    }
+                }
+
             }
 
             if (_index > 0)
                 Display(nextIndex);
-
 
         }
 

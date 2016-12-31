@@ -10,7 +10,7 @@ namespace ContextualMenuData {
 
         public List<ButtonModel> Buttons = new List<ButtonModel>(1) { new ButtonModel("@") };
 
-        private List<bool> areDetailsVisible  = new List<bool>(1) { true };
+        [SerializeField]private List<bool> areDetailsVisible  = new List<bool>(1) { true };
 
         public List<bool> AreDetailsVisible {
             get { return areDetailsVisible; }
@@ -49,7 +49,7 @@ namespace ContextualMenuData {
 
 
         public void RemoveButton(ButtonModel _btnModel) {
-            Debug.Log("<b>ScriptableMenuStructure</b> RemoveButton " + _btnModel.ToString());
+            //Debug.Log("<b>ScriptableMenuStructure</b> RemoveButton " + _btnModel.ToString());
 
             SerializableNode node       = GetNodeFromButton(_btnModel);
             SerializableNode parentNode = GetParent(node);
@@ -94,16 +94,19 @@ namespace ContextualMenuData {
         public ButtonModel[] GetChildren(ButtonModel _btnModel) {
             //Debug.Log("<b>ScriptableMenuStructure</b> GetChildren of " + _btnModel.ToString());
 
-            SerializableNode node = GetNodeFromButton(_btnModel);
+            SerializableNode   node     = GetNodeFromButton(_btnModel);
             SerializableNode[] subNodes = GetChildren(node);
-
+            
             int len = subNodes.Length;
+            //Debug.Log(node.ToString() + " : has " + len + " children");
             ButtonModel[] subButtons = new ButtonModel[len];
 
             int index;
 
             for (int i = 0; i < len; i++) {
-                index = serializedNodes.IndexOf(subNodes[i]);
+                //Debug.Log("i = " + i + ", subNodes[i] = " + subNodes[i].ToString());
+                index = subNodes[i].IndexOfFirstChild - 1;
+                //Debug.Log("subButtons[i] : Buttons " + index);
                 subButtons[i] = Buttons[index];
             }
 

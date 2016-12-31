@@ -35,6 +35,7 @@ namespace ContextualMenuData {
             public string Id;
             public int ChildCount;
             public int IndexOfFirstChild;
+            public int[] ChildIndexes;
 
             public SerializableNode() {
                 Id                = "@";
@@ -127,15 +128,12 @@ namespace ContextualMenuData {
             }
 
             int count = _node.ChildCount;
-            if (count > 0) {
 
-                SerializableNode childNode;
-
-                for (int i = 0; i < count; i++) {
-                    childNode = serializedNodes[index + i + 1];
-                    indexesToRemove.AddRange(RemoveNode(childNode, false));
-                    RemoveNode(childNode);
-                }
+            SerializableNode[] childNode = GetChildren(_node);
+            int it = 0;
+            while (it < count) {
+                indexesToRemove.AddRange(RemoveNode(childNode[it]));
+                it++;
             }
 
             if(!_isParentNode)// Just keep track of the new Childcount of the parent SerializedNode
@@ -155,6 +153,7 @@ namespace ContextualMenuData {
             int lastIndex = _indexesToRemove[_indexesToRemove.Count - 1];
             int len       = serializedNodes.Count;
 
+            
             for (int i = 0; i < len; i++) {
                 if (i >= lastIndex) {
                     serializedNodes[i].IndexOfFirstChild -= offset;
@@ -210,10 +209,11 @@ namespace ContextualMenuData {
         /// <param name="_node">The SerializableNode whose children we want to get</param>
         /// <returns>An array of SerializableNode</returns>
         public SerializableNode[] GetChildren(SerializableNode _node) {
-            //Debug.Log("<b>ScriptableTreeObject</b> GetChildren of " + _node.ToString());
+            //Debug.Log("<b>ScriptableTreeObject</b> GetChildren of " + GetNodeInfo(_node));
 
             int count = _node.ChildCount;
-            int index = serializedNodes.IndexOf(_node);
+            //int index = serializedNodes.IndexOf(_node);
+            int index = _node.IndexOfFirstChild - 1;
 
             if (count == 0) {
                 return new SerializableNode[0];
@@ -234,6 +234,7 @@ namespace ContextualMenuData {
                 currentNode = serializedNodes[i];
 
                 if (counters.Count == 1) {
+                    //Debug.Log("it " + it + ", " + GetNodeInfo(currentNode));
                     children[it++] = currentNode;
                     if (it == count) {
                         break;
@@ -244,9 +245,13 @@ namespace ContextualMenuData {
                     counters.Push(currentNode.ChildCount);
                 }
                 else {
-                    int n = counters.Pop() - 1; // We decrease the number of children of the current level
-                    if (n > 0)
-                        counters.Push(n);       // and we register the new count
+                    int n = 0;
+                    while (n == 0 && counters.Count > 0) {
+                        n = counters.Pop() - 1; // We decrease the number of children of the current level
+                        if (n > 0) {
+                            counters.Push(n);   // and we register the new count
+                        }
+                    }
                 }
             }
 
@@ -314,12 +319,20 @@ namespace ContextualMenuData {
 
             List<int> indexes = new List<int>();
 
-            int childCount;
-            if (serializedNodes.Count > _parentIndex) {
-                childCount = serializedNodes[_parentIndex].ChildCount;
+            if (_parentIndex < 0) {
+                childIndexes = indexes.ToArray();
+                return 0;
             }
-            else
-                childCount = 0;
+
+            int childCount = 0;
+            if (serializedNodes.Count > _parentIndex) {
+                try {
+                    childCount = serializedNodes[_parentIndex].ChildCount;
+                }
+                catch {
+                    Debug.LogError("Cannot reach parentIndex " + _parentIndex);
+                }
+            }
 
             for (int i = 0; i < childCount; i++) {
                 if (i == 0) {
