@@ -11,13 +11,16 @@ namespace ContextualMenu {
 
         public UnityAction<ButtonModel, ButtonsManager.EButtonActionState> ButtonsManagerAction;
 
-        [SerializeField] private ScriptableMenuStructure menu;
+        // TO DO : USe this reference instead of the one in the ButtonManager
+        //[SerializeField] private ScriptableMenuStructure menu;
         [SerializeField] private ButtonsManager    buttonsManagerRef = null;
         [SerializeField] private GameObject        buttonPrefab      = null;
         [SerializeField] private ETweenMode TweeningMode;
         [SerializeField] [Range(1.0f, 5.0f)]  private float spacing     = 1.5f;
         [SerializeField] [Range(1.0f, 10.0f)] private float tweenSpeed  = 3.5f;
         [SerializeField] private AnimationCurve TweeningCurve = AnimationCurve.Linear(0.0f, 0.0f, 1.0f,1.0f);
+
+        private bool isInUse = false;
 
         public static MenuManager Instance {
             get {
@@ -51,12 +54,24 @@ namespace ContextualMenu {
             }
         }
 
+        private void Awake() {
+            //Debug.Log("<b>MenuManager</b> Awake");
+
+            Resources.LoadAll<ScriptableMenuStructure>("");
+            if (instance == null) {
+                instance = this;
+            }
+        }
+
         // Use this for initialization
-        void Awake() {
+        public void InitializeMenuContext(ScriptableMenuStructure _menu) {
+            //Debug.Log("<b>MenuManager</b> InitializeMenuContext");
 
             if (instance == null) {
                 instance = this;
             }
+
+            //menu = _menu;
 
             if (MenuEventManager.Instance) { };
 
@@ -67,7 +82,7 @@ namespace ContextualMenu {
             if (buttonsManagerRef == null) {
                 buttonsManagerRef = GetComponent<ButtonsManager>();
             }
-            buttonsManagerRef.Init(menu);
+            buttonsManagerRef.Init(_menu);
 
             GameObject newBtnGo = Instantiate(buttonPrefab, Vector3.zero, Quaternion.identity, transform) as GameObject;
             PieButton  newBtn   = newBtnGo.GetComponent<PieButton>();
@@ -75,32 +90,50 @@ namespace ContextualMenu {
             if (newBtn != null) {
                 newBtn.GetComponent<RectTransform>().anchoredPosition = Vector3.zero;
                 newBtn.Init(_btnModel: buttonsManagerRef.GetRootButton(), _angularPos: 0, _isLinked: false);
+                newBtn.HandleClick();
             }
+
+            isInUse = true;
+        }
+
+        public void KillMenu() {
+            //Debug.Log("<b>MenuManager</b> KillMenu");
+
+            if (!isInUse)
+                return;
+
+            buttonsManagerRef.ResetAllButtons();
+            foreach(var pieBtn in GetComponentsInChildren<PieButton>()) {
+                GameObject go = pieBtn.gameObject;
+                Destroy(go);
+            }
+
+            isInUse = false;
 
         }
 
         public void CreateNewMenu() {
-            Debug.Log("<b>ButtonManager</b> CreateNewMenu");
+            //Debug.Log("<b>MenuManager</b> CreateNewMenu");
             ScriptableMenuStructure.CreateInstance("ScriptableMenuStructure");
         }
         
-        public Vector3 TweenPosition(Vector3 _startPoint, Vector3 _targetPoint, float delta) {
+        public Vector3 TweenPosition(Vector3 _startPoint, Vector3 _targetPoint, float _delta) {
 
             Vector3 movingPosition = Vector3.zero;
 
             switch (TweeningMode) 
             {
                     case ETweenMode.LINEAR:
-                        movingPosition = Linear(_startPoint, _targetPoint, delta);
+                        movingPosition = Linear(_startPoint, _targetPoint, _delta);
                         break;
 
                     case ETweenMode.EASE_IN:
-                        movingPosition = EaseIn(_startPoint, _targetPoint, delta);
-                        break;
+                        movingPosition = EaseIn(_startPoint, _targetPoint, _delta);
+                    break;
 
                     case ETweenMode.CURVE:
-                        movingPosition = Curve(_startPoint, _targetPoint, delta);
-                        break;
+                        movingPosition = Curve(_startPoint, _targetPoint, _delta);
+                    break;
 
                     default:
                         break;
@@ -194,19 +227,22 @@ namespace ContextualMenu {
             return inc * angularInc + _baseAngle;
         }
 
-        Vector3 Linear(Vector3 _startPoint, Vector3 _targetPoint, float delta) {
-            return Vector3.Lerp(_startPoint, _targetPoint, delta);
+        Vector3 Linear(Vector3 _startPoint, Vector3 _targetPoint, float _delta) {
+
+            return Vector3.Lerp(_startPoint, _targetPoint, _delta);
         }
 
-        Vector3 EaseIn(Vector3 _startPoint, Vector3 _targetPoint, float delta) {
-            return Vector3.Lerp(_startPoint, _targetPoint, delta * delta);
+        Vector3 EaseIn(Vector3 _startPoint, Vector3 _targetPoint, float _delta) {
+
+            return Vector3.Lerp(_startPoint, _targetPoint, _delta * _delta);
         }
 
-        Vector3 Curve(Vector3 _startPoint, Vector3 _targetPoint, float delta) {
-            return (_targetPoint - _startPoint) * TweeningCurve.Evaluate(delta) + _startPoint;
+        Vector3 Curve(Vector3 _startPoint, Vector3 _targetPoint, float _delta) {
+
+            return (_targetPoint - _startPoint) * TweeningCurve.Evaluate(_delta) + _startPoint;
         }
 
-          
+
     }
 
 }

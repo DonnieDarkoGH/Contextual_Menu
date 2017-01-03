@@ -7,7 +7,7 @@ using System.Reflection;
 
 public class EventParameterWindow : EditorWindow {
 
-    GameObject   target = null;
+    //GameObject   target = null;
     Component[]  components;
     string[]     componentsName;
     int          componentIndex;
@@ -16,7 +16,7 @@ public class EventParameterWindow : EditorWindow {
     MethodInfo[] methodsInComponent;
     
     int          methodIndex;
-    bool isSetup = false;
+    //bool isSetup = false;
 
     static void Init() {
         EventParameterWindow myWindow = EditorWindow.GetWindow<EventParameterWindow>();

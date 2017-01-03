@@ -70,6 +70,8 @@ namespace ContextualMenu {
         public void ResetAllButtons() {
             //Debug.Log("<b>ButtonsManager</b> ResetAllButtons");
 
+            StopListening();
+
             int len = menu.Buttons.Count;
             for (int i = 0; i < len; i++) {
                 menu.Buttons[i].Reset();
@@ -187,10 +189,6 @@ namespace ContextualMenu {
             return isProcessing;
         }
 
-        //private void LateUpdate() {
-        //    activePathIdToArray = activePathIdInMenu.ToArray();
-        //}
-
         private void StopListening() {
             //Debug.Log("<b>ButtonsManager</b> StopListening");
             int len = menu.Buttons.Count;
@@ -198,8 +196,9 @@ namespace ContextualMenu {
                 MenuEventManager.StopListening(menu.Buttons[i], EButtonActionState.CLICKED            , ButtonModelAction);
                 //MenuEventManager.StopListening(menu.Buttons[i], EButtonActionState.ANIMATION_STARTED, ButtonModelAction);
                 MenuEventManager.StopListening(menu.Buttons[i], EButtonActionState.ANIMATION_ENDED    , ButtonModelAction);
-                MenuEventManager.StopListening(menu.Buttons[i], EButtonActionState.RETRACTING         , MenuManager.Instance.ButtonsManagerAction);
-                MenuEventManager.StopListening(menu.Buttons[i], EButtonActionState.EXPANDING          , MenuManager.Instance.ButtonsManagerAction);
+
+                MenuEventManager.StopListening(menu.Buttons[i], EButtonActionState.RETRACTING, MenuManager.Instance.ButtonsManagerAction);
+                MenuEventManager.StopListening(menu.Buttons[i], EButtonActionState.EXPANDING, MenuManager.Instance.ButtonsManagerAction);
             }
 
         }

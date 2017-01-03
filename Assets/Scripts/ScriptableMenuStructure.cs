@@ -9,6 +9,7 @@ namespace ContextualMenuData {
     public class ScriptableMenuStructure : ScriptableTreeObject {
 
         public List<ButtonModel> Buttons = new List<ButtonModel>(1) { new ButtonModel("@") };
+        public EContext Context;
 
         [SerializeField]private List<bool> areDetailsVisible  = new List<bool>(1) { true };
 

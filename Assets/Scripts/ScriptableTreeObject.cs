@@ -20,9 +20,6 @@ namespace ContextualMenuData {
     /// </remarks>
     public class ScriptableTreeObject : ScriptableObject {
 
-        public delegate void ScriptableTreeObjectEvent(List<int> indexes);
-        public event         ScriptableTreeObjectEvent OnNodeRemoved;
-
         /// <summary>
         /// This class create unit nodes that can be serialized by Unity
         /// </summary>

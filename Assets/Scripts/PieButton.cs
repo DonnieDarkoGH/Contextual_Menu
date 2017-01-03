@@ -28,6 +28,8 @@ namespace ContextualMenu {
         private float baseAngle = 0.0f;
         private float startTime = 0;
         private float distance  = 0.0f;
+        private float distanceMini    = 0.0f;
+        private bool  isLinkRetracted = false;
 
         public float BaseAngle {
             get { return baseAngle; }
@@ -76,7 +78,7 @@ namespace ContextualMenu {
             if (icon == null) {
                 icon = GetComponentsInChildren<Image>()[2];
             }
-            icon.overrideSprite = btnModel.Icon;
+            icon.sprite = btnModel.Icon;
 
             width     = rectTransform.rect.width;
             height    = rectTransform.rect.height;
@@ -85,9 +87,9 @@ namespace ContextualMenu {
             btnModel.OriginPoint = rectTransform.anchoredPosition;
 
             CalculateTrajectory();
-            
+
             if (_isLinked) {
-                //CreateLink(_angularPos);
+                CreateLink(_angularPos);
             }
 
             MenuEventManager.TriggerEvent(btnModel, ButtonsManager.EButtonActionState.ANIMATION_STARTED);
@@ -100,6 +102,9 @@ namespace ContextualMenu {
                 movingPosition = MenuManager.Instance.TweenPosition(_start, _end, TimeRatio());
                 rectTransform.anchoredPosition = movingPosition;
 
+                if (!isLinkRetracted)
+                    UpdateLink();
+
                 yield return null;
             }
 
@@ -110,7 +115,10 @@ namespace ContextualMenu {
             startPoint  = targetPoint;
             targetPoint = tmp;
 
-            if(btnModel.State == ButtonModel.EState.RETRACTING) {
+            isLinkRetracted = false;
+            UpdateLink();
+
+            if (btnModel.State == ButtonModel.EState.RETRACTING) {
                 Destroy(gameObject.gameObject);
             }
 
@@ -170,17 +178,31 @@ namespace ContextualMenu {
 
             float x = height * 0.5f * Mathf.Sin(_rotation * Mathf.Deg2Rad);
             float y = width * 0.5f * Mathf.Cos(_rotation * Mathf.Deg2Rad);
+            Vector3 offset = new Vector3(x, y, 0) * 0.8f;
 
-            origin = btnModel.OriginPoint + new Vector3(x, y, 0);
+            origin  = btnModel.OriginPoint + offset;
+
+            distanceMini = offset.magnitude;
 
         }
 
         private void UpdateLink() {
-            //Debug.Log("<b>PieButton</b> UpdateLink");
+            //Debug.Log("<b>PieButton</b> UpdateLink (TweenRatio = " + _tweenRatio + ")");
 
-            float distance = Vector3.Distance(origin, movingPosition);
+            distance = Vector2.Distance(origin, movingPosition);
 
-            linkRef.sizeDelta = new Vector2(2, distance);
+            if (distance <= distanceMini && btnModel.State == ButtonModel.EState.RETRACTING) {
+                isLinkRetracted = true;
+                return;
+            }
+
+            if (distance > distanceMini) {
+                linkRef.sizeDelta = new Vector2(2, distance);
+            }
+            else {
+                linkRef.sizeDelta = Vector2.zero;
+            }
+
         }
 
         private float TimeRatio() {

@@ -14,7 +14,7 @@ namespace ContextualMenuData {
 
         private ScriptableTreeObject.SerializableNode node;
         private ButtonModel button;
-        private GUIStyle foldoutStyle1, foldoutStyle2;
+        private GUIStyle titleStyle, foldoutStyle1, foldoutStyle2;
         private bool isSetup = false;
         private int buttonCount;
         private int level;
@@ -33,6 +33,9 @@ namespace ContextualMenuData {
 
             SerializedObject so = new SerializedObject(MenuEventManager.Instance);
             eventsListInManager = so.FindProperty("ActionEvents");
+
+            titleStyle    = new GUIStyle();
+            titleStyle.fontStyle = FontStyle.Bold;
 
             foldoutStyle1 = new GUIStyle(EditorStyles.foldout);
             foldoutStyle2 = new GUIStyle(EditorStyles.foldout);
@@ -60,6 +63,11 @@ namespace ContextualMenuData {
             if (buttonCount == 0) {
                 return;
             }
+
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Menu for ", titleStyle, GUILayout.MaxWidth(100));
+            managerScript.Context = (EContext)EditorGUILayout.EnumPopup(managerScript.Context);
+            EditorGUILayout.EndHorizontal();
 
             if (GUILayout.Button("Clear")) {
                 Undo.RecordObject(target, "Clear data");

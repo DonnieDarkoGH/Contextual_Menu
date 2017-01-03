@@ -8,20 +8,17 @@ namespace ContextualMenuData {
     public class ScriptableTreeObjectEditor : Editor {
 
         ScriptableTreeObject managerScript;
-        SerializedProperty nodeListProp;
 
         public int Index = 0;
 
         void OnEnable() {
             managerScript = (ScriptableTreeObject)target;
-            nodeListProp = serializedObject.FindProperty("serializedNodes");
         }
 
         public override void OnInspectorGUI() {
 
             if (managerScript.serializedNodes == null || managerScript.serializedNodes.Count == 0)
                 managerScript.Init();
-                //managerScript.serializedNodes = new List<ScriptableTreeObject.SerializableNode>(1) { new ScriptableTreeObject.SerializableNode() };
 
             serializedObject.Update();
             EditorGUILayout.LabelField("Count :" + managerScript.serializedNodes.Count);
@@ -53,8 +50,8 @@ namespace ContextualMenuData {
             EditorGUI.indentLevel = managerScript.GetLevel(_node);
 
             int[] childIndexes;
-            int index     = managerScript.serializedNodes.IndexOf(_node);
-            int nextIndex = managerScript.GetNextIndex(index, out childIndexes);
+            int index = managerScript.serializedNodes.IndexOf(_node);
+            managerScript.GetNextIndex(index, out childIndexes);
 
             GUILayout.BeginHorizontal();
             EditorGUILayout.LabelField(managerScript.GetNodeInfo(_node));
