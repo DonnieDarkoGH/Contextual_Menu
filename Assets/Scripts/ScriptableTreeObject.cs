@@ -4,9 +4,6 @@ using UnityEngine;
 
 
 namespace ContextualMenuData {
-    // Remove the following attribute if you want to use the class ouside a Unity context
-    [CreateAssetMenu(fileName = "NewTree", menuName = "TreeObject/NewTree", order = 1)]
-    [Serializable]
     /// <summary>
     /// The ScriptableTreeObject class creates an instance of non-binary Tree Data Structure that manages a list of SerializableNode at a basic level.
     /// It is implementing some methods that allow to add or remove nodes, but that also return useful information like GetChildren, GetParent and so on.
@@ -15,9 +12,12 @@ namespace ContextualMenuData {
     /// Note 1 : This is the parent class for ScriptableMenuStructure.
     /// Note 2 : There is a specifity regarding common Tree Data Structure : The node children are added at the end of the list of their parent node. 
     /// For this reason, we need to resort to methods like NextIndex or ShiftIndexes...
-    /// Note 3 : The way that node Id are designed and managed, node Levels and Getter could rely solely on string manipulation. But I chose not to rely on this because strings could proove unstable depending on systems and language preferences.
-    /// However, I chose no to rely on 
+    /// Note 3 : The way that node Id are designed and managed, node Levels and Getter could rely solely on string manipulation. 
+    /// But I chose not to rely on this because strings could proove unstable depending on systems and language preferences.
     /// </remarks>
+    // Remove the following attribute if you want to use the class ouside a Unity context
+    [CreateAssetMenu(fileName = "NewTree", menuName = "TreeObject/NewTree", order = 1)]
+    [Serializable]
     public class ScriptableTreeObject : ScriptableObject {
 
         /// <summary>
@@ -58,7 +58,7 @@ namespace ContextualMenuData {
         /// </summary>
         public List<SerializableNode> serializedNodes = new List<SerializableNode>(1) { new SerializableNode() };
 
-        #region virtual METHODS
+#region virtual METHODS
         /// <summary>
         /// Simple initialization that ensures there is at least a root node after clearing
         /// </summary>
@@ -72,6 +72,8 @@ namespace ContextualMenuData {
         public virtual void ClearAll() {
             //Debug.Log("<b>ScriptableTreeObject</b> ClearAll");
             serializedNodes.Clear();
+
+            serializedNodes = new List<SerializableNode>(1) { new SerializableNode() };
         }
 
         /// <summary>
@@ -109,7 +111,7 @@ namespace ContextualMenuData {
         }
 
         /// <summary>
-        /// This recursive method removes a SerializedNode, its children and all the other related children 
+        /// This recursive method registers the indexes to remove when we want to suppress a SerializedNode, its children and all the other related children 
         /// </summary>
         /// <param name="_node">The SerializableNode we want to remove</param>
         /// <returns>An array of indexes values corresponding to the nodes that are suppressed, including thi one</returns>
@@ -141,6 +143,11 @@ namespace ContextualMenuData {
             return indexesToRemove;
         }
 
+        /// <summary>
+        /// TO DO
+        /// </summary>
+        /// <param name="_indexesToRemove"></param>
+        /// <param name="_parentNode"></param>
         protected virtual void UpdateLists(List<int> _indexesToRemove, SerializableNode _parentNode = null) {
             //Debug.Log("<b>ScriptableTreeObject</b> UpdateLists ");
 
@@ -169,9 +176,9 @@ namespace ContextualMenuData {
 
         }
 
-        #endregion virtual METHODS
+#endregion virtual METHODS
 
-        #region Getter METHODS
+#region Getter METHODS
         /// <summary>
         /// This method is used to keep track of node.childCount in RemoveNode
         /// </summary>
@@ -201,7 +208,7 @@ namespace ContextualMenuData {
         }
 
         /// <summary>
-        /// This method is used by the inherited class to get access to the buttons when retracting/unfolding them in cascade
+        /// Gets an array of SerializableNode instances that are the first level children of the given SerializableNode
         /// </summary>
         /// <param name="_node">The SerializableNode whose children we want to get</param>
         /// <returns>An array of SerializableNode</returns>
@@ -253,6 +260,79 @@ namespace ContextualMenuData {
             }
 
             return children;
+        }
+
+        /// <summary>
+        /// This method is used by the custom editor to get all related sub children when reordering the node
+        /// </summary>
+        /// <param name="_node">The SerializableNode whose children we want to get</param>
+        /// <returns>An array of SerializableNode</returns>
+        public int[] GetNodeAndSubChildrenId(SerializableNode _node) {
+            //Debug.Log("<b>ScriptableTreeObject</b> GetNodeAndSubChildrenId of " + GetNodeInfo(_node));
+
+            int       len = serializedNodes.Count;
+            int       level     = GetLevel(_node);
+            int       nextIndex = _node.IndexOfFirstChild;
+            List<int> nodesId   = new List<int>(1) { nextIndex - 1};
+
+            if (nextIndex < len) {
+                SerializableNode nextNode = serializedNodes[nextIndex];
+
+                while (GetLevel(nextNode) > level) {
+
+                    nodesId.Add(nextIndex);
+                    nextIndex++;
+
+                    if (nextIndex < len)
+                        nextNode = serializedNodes[nextIndex];
+                    else
+                        break;
+                }
+            }
+
+            return nodesId.ToArray();
+        }
+
+        /// <summary>
+        /// TO DO
+        /// </summary>
+        /// <param name="_indexesToMove"></param>
+        /// <param name="_startIndex"></param>
+        public virtual int ReorderElements(int[] _indexesToMove, int _startIndex) {
+            //Debug.Log("<b>ScriptableTreeObject</b> ReorderElements starting from " + _startIndex);
+
+            bool isMovedBefore    = _startIndex < _indexesToMove[0];
+            int len               = _indexesToMove.Length;
+            int indexOfFirstChild = serializedNodes[_startIndex].IndexOfFirstChild + _startIndex - _indexesToMove[0];
+
+            serializedNodes[_startIndex].IndexOfFirstChild = indexOfFirstChild;
+            if (len < 2) {        
+                return isMovedBefore ? _startIndex : _startIndex - len + 1;
+            }
+
+            var nodes = new SerializableNode[len - 1];
+
+            if (isMovedBefore) {
+                for (int i = 0; i < len - 1; i++) {
+                    nodes[i] = serializedNodes[_indexesToMove[i + 1]];
+                }
+                serializedNodes.RemoveRange(_indexesToMove[1], len - 1);
+                serializedNodes.InsertRange(_startIndex + 1, nodes);
+            }
+            else {
+                for (int i = 0; i < len - 1; i++) {
+                    nodes[i] = serializedNodes[_indexesToMove[i]];
+                }
+                serializedNodes.InsertRange(_startIndex + 1, nodes);
+                serializedNodes.RemoveRange(_indexesToMove[0], len - 1);
+            }
+
+            int nodeCount = serializedNodes.Count;
+            for(int i =0; i < nodeCount; i++) {
+                serializedNodes[i].IndexOfFirstChild = i + 1;
+            }
+
+            return isMovedBefore ? _startIndex : _startIndex - len + 1;
         }
 
         /// <summary>
@@ -353,9 +433,9 @@ namespace ContextualMenuData {
                 return _parentIndex;
             }
         }
-        #endregion Getter METHODS
+#endregion Getter METHODS
 
-        #region TOOLS
+#region TOOLS
         /// <summary>
         /// Getting information about a node from the ScriptableTreeObject class allows us to have more complete ones 
         /// </summary>
@@ -409,6 +489,6 @@ namespace ContextualMenuData {
             }
         }
 
-        #endregion TOOLS
+#endregion TOOLS
     }
 }

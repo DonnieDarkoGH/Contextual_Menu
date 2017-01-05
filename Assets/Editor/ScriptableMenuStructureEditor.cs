@@ -4,7 +4,7 @@ using UnityEditor;
 using ContextualMenu;
 
 namespace ContextualMenuData {
-    [CustomEditor(typeof(ScriptableMenuStructure))]
+    //[CustomEditor(typeof(ScriptableMenuStructure))]
     [CanEditMultipleObjects]
     public class ScriptableMenuStructureEditor : Editor {
 

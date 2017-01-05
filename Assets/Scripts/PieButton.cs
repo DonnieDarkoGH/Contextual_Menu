@@ -8,12 +8,25 @@ using System.Reflection;
 
 namespace ContextualMenu {
 
+    /// <summary>
+    /// 
+    /// </summary>
     public class PieButton : MonoBehaviour {
-
+        /// <summary>
+        /// 
+        /// </summary>
         private UnityAction<ButtonModel, ButtonsManager.EButtonActionState> ButtonModelAction;
-
+        /// <summary>
+        /// 
+        /// </summary>
         [SerializeField] private ButtonModel   btnModel;
+        /// <summary>
+        /// 
+        /// </summary>
         [SerializeField] private RectTransform linkRef = null;
+        /// <summary>
+        /// 
+        /// </summary>
         [SerializeField] private Image         icon = null;
 
         private Vector3 movingPosition  = Vector3.zero;
@@ -78,8 +91,10 @@ namespace ContextualMenu {
             if (icon == null) {
                 icon = GetComponentsInChildren<Image>()[2];
             }
-            icon.sprite = btnModel.Icon;
-
+            if (btnModel.Icon) {
+                icon.sprite = btnModel.Icon;
+            }
+                
             width     = rectTransform.rect.width;
             height    = rectTransform.rect.height;
             baseAngle = _angularPos;
@@ -128,6 +143,8 @@ namespace ContextualMenu {
 
         public void HandleClick() {
             //Debug.Log("<b>PieButton</b> HandleClick");
+
+            MenuManager.Instance.isInputInButton = true;
 
             if (btnModel.State != ButtonModel.EState.IN_PLACE)
                 return;
