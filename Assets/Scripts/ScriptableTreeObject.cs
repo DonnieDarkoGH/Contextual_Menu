@@ -32,7 +32,6 @@ namespace ContextualMenuData {
             public string Id;
             public int ChildCount;
             public int IndexOfFirstChild;
-            public int[] ChildIndexes;
 
             public SerializableNode() {
                 Id                = "@";

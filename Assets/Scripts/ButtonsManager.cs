@@ -234,8 +234,8 @@ namespace ContextualMenu {
             // then launch the sequence
             SwitchMenu();
 
-            // After that we trigger the Button Action that affects the gameplay and the other objects
-            MenuEventManager.Instance.TryButtonAction(menu.Buttons.IndexOf(_btnModel));
+            // After that, we trigger the Button Action that affects the gameplay and the other objects
+            MenuEventManager.Instance.TryButtonAction(menu.Context, _btnModel.Id);
 
         }
 

@@ -1,5 +1,7 @@
 fileFormatVersion: 2
 guid: 9165d761e712f9b4089c65436c3822af
+labels:
+- Ui
 timeCreated: 1482914438
 licenseType: Free
 MonoImporter:

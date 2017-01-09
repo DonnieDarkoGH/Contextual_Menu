@@ -39,6 +39,11 @@ namespace ContextualMenu {
         [SerializeField] private string id;
 
         /// <summary>
+        /// This index refers to the ActionEvents list in the MenuEventManager. When activating this button, we triggers the UnityEvent at this index.
+        /// </summary>
+        [SerializeField] private int relatedEventIndex = -1;
+
+        /// <summary>
         /// By managing ButtonModel states like in a finished state machine, we ensure that the beahviour is stable (we must complete a state before entering a new one)
         /// </summary>
         private EState  state         = EState.CREATED;
@@ -69,6 +74,15 @@ namespace ContextualMenu {
         public string Id {
             get { return id; }
             set { id = value; }
+        }
+
+        /// <summary>
+        /// This index refers to the ActionEvents list in the MenuEventManager.
+        /// When activating this button, we triggers the UnityEvent at this index.
+        /// </summary>
+        public int RelatedEventIndex {
+            get { return relatedEventIndex; }
+            set { relatedEventIndex = value; }
         }
 
         /// <summary>
